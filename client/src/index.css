@@ -31,6 +31,11 @@
 body {
   background-color: var(--color-base);
   color: var(--color-text);
+  background-image: url('/background.png');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
 }
 
 @layer utilities {

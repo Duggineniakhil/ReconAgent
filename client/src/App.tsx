@@ -95,7 +95,7 @@ const Dashboard = () => {
     </div>
   </div>
 
-      <div className="flex flex-col md:flex-row bg-surface border border-border rounded-md divide-y md:divide-y-0 md:divide-x divide-border">
+      <div className="flex flex-col md:flex-row bg-surface/80 backdrop-blur-md border border-border/50 rounded-md divide-y md:divide-y-0 md:divide-x divide-border/50">
         <div className="flex-1 p-6 flex flex-col justify-center">
           <span className="text-xs font-sans text-text-muted mb-1">Total records</span>
           <span className="text-3xl font-mono font-bold text-text">{metrics?.total_records || '0'}</span>
@@ -117,7 +117,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      <div className="bg-surface p-6 rounded-md border border-border">
+      <div className="bg-surface/80 backdrop-blur-md p-6 rounded-md border border-border/50">
         <h2 className="text-base font-serif font-medium text-text mb-6">Match Method Distribution</h2>
         
         {hasData ? (
@@ -207,7 +207,7 @@ const ExceptionsQueue = ({ onTrace }: { onTrace: (id: number) => void }) => {
             onClick={() => toggleExpand(exc.exception_id)}
             tabIndex={0}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleExpand(exc.exception_id); } }}
-            className="bg-surface rounded-md border border-border p-4 cursor-pointer hover:border-surface-raised transition-colors flex flex-col gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-matched focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
+            className="bg-surface/80 backdrop-blur-md rounded-md border border-border/50 p-4 cursor-pointer hover:bg-surface transition-colors flex flex-col gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-matched focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
           >
             <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
               <div className="flex-1">
@@ -291,7 +291,7 @@ const MatchesView = ({ onTrace }: { onTrace: (id: number) => void }) => {
   return (
     <div className="space-y-4 animate-in fade-in">
       <h2 className="text-xl font-bold font-serif text-text mb-4">Matched Records</h2>
-      <div className="overflow-x-auto rounded-md border border-border">
+      <div className="overflow-x-auto rounded-md border border-border/50 bg-surface/50 backdrop-blur-md">
         <table className="w-full text-left text-sm text-text">
           <thead className="bg-surface-raised text-text-muted font-medium text-xs">
             <tr>
@@ -305,7 +305,7 @@ const MatchesView = ({ onTrace }: { onTrace: (id: number) => void }) => {
           </thead>
           <tbody>
             {matches.map((m, i) => (
-              <tr key={m.match_id} className={cn("hover:brightness-110 transition-colors", i % 2 === 0 ? "bg-surface" : "bg-base")}>
+              <tr key={m.match_id} className={cn("hover:bg-surface transition-colors", i % 2 === 0 ? "bg-surface/80" : "bg-base/60")}>
                 <td className="px-4 py-1.5 font-mono text-xs font-medium text-text">{m.invoice_id}</td>
                 <td className="px-4 py-1.5 font-mono text-xs">{m.bank_txn_id}</td>
                 <td className="px-4 py-1.5 font-mono text-xs text-right">
@@ -338,7 +338,7 @@ const MatchesView = ({ onTrace }: { onTrace: (id: number) => void }) => {
               </tr>
             ))}
             {matches.length === 0 && (
-              <tr><td colSpan={6} className="px-4 py-6 text-center text-text-muted bg-surface">No matches yet.</td></tr>
+              <tr><td colSpan={6} className="px-4 py-6 text-center text-text-muted bg-surface/80">No matches yet.</td></tr>
             )}
           </tbody>
         </table>
@@ -376,9 +376,9 @@ const TraceModal = ({ ledgerId, onClose }: { ledgerId: number; onClose: () => vo
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-surface border border-border w-full max-w-3xl max-h-[85vh] rounded-md flex flex-col overflow-hidden">
-        <div className="flex items-center justify-between p-6 border-b border-border">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-base/60 backdrop-blur-md animate-in fade-in duration-200 p-4">
+      <div className="bg-surface/95 border border-border/50 w-full max-w-3xl max-h-[85vh] rounded-md flex flex-col overflow-hidden shadow-2xl">
+        <div className="flex items-center justify-between p-6 border-b border-border/50">
           <h3 className="text-xl font-bold font-serif text-text flex items-center gap-2">
             <FileSearch size={22} className="text-text-muted" />
             Investigation Trace
@@ -468,10 +468,10 @@ function App() {
  ] as const;
 
  return (
-  <div className="flex h-screen bg-base text-text overflow-hidden font-sans">
+  <div className="flex h-screen bg-transparent text-text overflow-hidden font-sans relative">
   {/* Sidebar */}
-  <div className="w-16 md:w-64 flex-shrink-0 bg-surface border-r border-border flex flex-col transition-all duration-300">
-  <div className="p-4 md:p-6 border-b border-border">
+  <div className="w-16 md:w-64 flex-shrink-0 bg-surface/80 backdrop-blur-md border-r border-border/50 flex flex-col transition-all duration-300 relative z-10">
+  <div className="p-4 md:p-6 border-b border-border/50">
   <div className="flex items-center justify-center md:justify-start gap-3 text-text">
   <div className="w-8 h-8 rounded-md bg-border flex items-center justify-center shrink-0">
   <Database size={20} className="text-text"/>
@@ -502,7 +502,7 @@ function App() {
   </div>
 
  {/* Main Content */}
- <main className="flex-1 overflow-auto bg-base">
+ <main className="flex-1 overflow-auto bg-transparent relative z-10">
  <div className="p-8 max-w-7xl mx-auto">
  {currentTab === 'dashboard' && <Dashboard />}
  {currentTab === 'exceptions' && <ExceptionsQueue onTrace={setTraceId} />}
