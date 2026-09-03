@@ -13,18 +13,19 @@
 
   --font-sans: 'IBM Plex Sans', sans-serif;
   --font-mono: 'IBM Plex Mono', monospace;
+  --font-serif: 'Newsreader', serif;
 }
 
 :root {
-  --color-base: #0B0E14;
-  --color-surface: #12161F;
-  --color-surface-raised: #171C28;
-  --color-border: #232838;
-  --color-text: #E8EAF0;
-  --color-text-muted: #8B93A7;
-  --color-accent-matched: #14B8A6;
-  --color-accent-exception: #F5A623;
-  --color-accent-error: #EF4444;
+  --color-base: #F4F6F1;
+  --color-surface: #FFFFFF;
+  --color-surface-raised: #FBFCFA;
+  --color-border: #DDE3DA;
+  --color-text: #1B2B22;
+  --color-text-muted: #5C6B62;
+  --color-accent-matched: #0F6B4C;
+  --color-accent-exception: #B8860B;
+  --color-accent-error: #C0392B;
 }
 
 body {

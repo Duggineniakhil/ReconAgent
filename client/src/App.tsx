@@ -66,10 +66,10 @@ const Dashboard = () => {
     <div className="space-y-6 animate-in fade-in duration-500">
   <div className="flex justify-between items-center">
     <div className="flex items-center gap-4">
-      <div className="flex items-center gap-2 text-sm text-text-muted font-medium">
-        <span>ReconAgent</span>
-        <span>/</span>
-        <span className="text-text font-semibold">Dashboard</span>
+      <div className="flex items-center gap-2 text-text-muted">
+        <span className="font-serif text-lg">ReconAgent</span>
+        <span className="text-sm">/</span>
+        <span className="text-text font-semibold font-serif text-lg">Dashboard</span>
       </div>
       <span className="px-2 py-0.5 text-xs font-mono text-text-muted bg-surface-raised border border-border rounded-full">
         Demo dataset &middot; synthetic
@@ -87,7 +87,7 @@ const Dashboard = () => {
       <button
         onClick={handleRunReconcile}
         disabled={loading || ingesting}
-        className="flex items-center gap-2 px-4 py-2 bg-accent-matched hover:brightness-110 text-[#0B0E14] rounded-md transition-all font-medium disabled:opacity-50 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-matched focus-visible:ring-offset-2 focus-visible:ring-offset-base"
+        className="flex items-center gap-2 px-4 py-2 bg-accent-matched hover:brightness-110 text-surface rounded-md transition-all font-medium disabled:opacity-50 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-matched focus-visible:ring-offset-2 focus-visible:ring-offset-base"
       >
         <Play size={18} className={loading ? 'animate-pulse' : ''} />
         {loading ? 'Reconciling...' : 'Run Agent (Next 4)'}
@@ -118,7 +118,7 @@ const Dashboard = () => {
       </div>
 
       <div className="bg-surface p-6 rounded-md border border-border">
-        <h2 className="text-sm font-sans font-medium text-text mb-6">Match Method Distribution</h2>
+        <h2 className="text-base font-serif font-medium text-text mb-6">Match Method Distribution</h2>
         
         {hasData ? (
           <div className="mt-2">
@@ -197,7 +197,7 @@ const ExceptionsQueue = ({ onTrace }: { onTrace: (id: number) => void }) => {
 
   return (
     <div className="space-y-3">
-      <h2 className="text-xl font-bold text-text mb-4">Exceptions Queue</h2>
+      <h2 className="text-xl font-bold font-serif text-text mb-4">Exceptions Queue</h2>
       {exceptions.map(exc => {
         const isExpanded = expandedIds.has(exc.exception_id);
         
@@ -232,7 +232,7 @@ const ExceptionsQueue = ({ onTrace }: { onTrace: (id: number) => void }) => {
                     <button
                       disabled={loading || !exc.best_candidate_txn_id}
                       onClick={() => handleResolve(exc.exception_id, 'match', exc.best_candidate_txn_id)} 
-                      className="px-3 py-1.5 text-xs font-medium border border-accent-matched text-accent-matched hover:bg-accent-matched hover:text-[#0B0E14] rounded transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-matched focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
+                      className="px-3 py-1.5 text-xs font-medium border border-accent-matched text-accent-matched hover:bg-accent-matched hover:text-surface rounded transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-matched focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
                     >
                       Approve
                     </button>
@@ -290,7 +290,7 @@ const MatchesView = ({ onTrace }: { onTrace: (id: number) => void }) => {
 
   return (
     <div className="space-y-4 animate-in fade-in">
-      <h2 className="text-xl font-bold text-text mb-4">Matched Records</h2>
+      <h2 className="text-xl font-bold font-serif text-text mb-4">Matched Records</h2>
       <div className="overflow-x-auto rounded-md border border-border">
         <table className="w-full text-left text-sm text-text">
           <thead className="bg-surface-raised text-text-muted font-medium text-xs">
@@ -379,7 +379,7 @@ const TraceModal = ({ ledgerId, onClose }: { ledgerId: number; onClose: () => vo
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-surface border border-border w-full max-w-3xl max-h-[85vh] rounded-md flex flex-col overflow-hidden">
         <div className="flex items-center justify-between p-6 border-b border-border">
-          <h3 className="text-xl font-bold text-text flex items-center gap-2">
+          <h3 className="text-xl font-bold font-serif text-text flex items-center gap-2">
             <FileSearch size={22} className="text-text-muted" />
             Investigation Trace
           </h3>
@@ -476,7 +476,7 @@ function App() {
   <div className="w-8 h-8 rounded-md bg-border flex items-center justify-center shrink-0">
   <Database size={20} className="text-text"/>
   </div>
-  <span className="hidden md:inline text-xl font-bold text-text tracking-tight">ReconAgent</span>
+  <span className="hidden md:inline text-xl font-bold font-serif text-text tracking-tight">ReconAgent</span>
   </div>
   </div>
   
