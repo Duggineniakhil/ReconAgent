@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, AlertCircle, CheckCircle2, Play, Database } from 'lucide-react';
-import { fetchMetrics, triggerIngest, triggerReconcile, fetchMatches, Metrics, Match } from './api';
+import { LayoutDashboard, AlertCircle, CheckCircle2, Play, Database, FileSearch, X, Check, XCircle } from 'lucide-react';
+import { fetchMetrics, triggerIngest, triggerReconcile, fetchMatches, fetchExceptions, fetchAuditLog, resolveException } from './api';
+import type { Metrics, Match, Exception, AuditLog } from './api';
 import clsx from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
@@ -83,7 +84,7 @@ const Dashboard = () => {
         <MetricCard title="Total Records" value={metrics?.total_records || '0'} />
         <MetricCard title="Total Matches" value={metrics?.total_matches || '0'} />
         <MetricCard title="Exceptions" value={metrics?.total_exceptions || '0'} />
-        <MetricCard title="Precision" value={metrics?.precision !== undefined ? \`\${(metrics.precision * 100).toFixed(1)}%\` : '0%'} />
+        <MetricCard title="Precision" value={metrics?.precision !== undefined ? ((metrics.precision * 100).toFixed(1) + '%') : '0%'} />
       </div>
 
       <div className="bg-surface p-6 rounded-xl border border-surface-border">
@@ -100,7 +101,7 @@ const Dashboard = () => {
                 />
                 <Bar dataKey="count" radius={[4, 4, 0, 0]} maxBarSize={60}>
                   {chartData.map((entry, index) => (
-                    <Cell key={\`cell-\${index}\`} fill={colors[entry.name as keyof typeof colors] || '#3b82f6'} />
+                    <Cell key={`cell-${index}`} fill={colors[entry.name as keyof typeof colors] || '#3b82f6'} />
                   ))}
                 </Bar>
               </BarChart>
@@ -124,11 +125,220 @@ const MetricCard = ({ title, value }: { title: string; value: string | number })
   </div>
 );
 
-const ExceptionsQueue = () => <div className="text-white">Exceptions Queue (Coming soon)</div>;
-const MatchesView = () => <div className="text-white">Matches (Coming soon)</div>;
+const ExceptionsQueue = ({ onTrace }: { onTrace: (id: number) => void }) => {
+  const [exceptions, setExceptions] = useState<Exception[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const load = async () => {
+    const data = await fetchExceptions();
+    setExceptions(data);
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const handleResolve = async (id: number, action: 'match' | 'reject', bankTxnId: string | null) => {
+    setLoading(true);
+    await resolveException(id, action, bankTxnId || undefined);
+    await load();
+    setLoading(false);
+  };
+
+  if (exceptions.length === 0) {
+    return <div className="text-text-muted mt-8">No open exceptions. Great job!</div>;
+  }
+
+  return (
+    <div className="space-y-4">
+      <h2 className="text-2xl font-bold text-white mb-6">Exceptions Queue</h2>
+      {exceptions.map(exc => (
+        <div key={exc.exception_id} className="bg-surface p-6 rounded-xl border border-surface-border flex flex-col md:flex-row gap-6">
+          <div className="flex-1 space-y-4">
+            <div className="flex items-center gap-3">
+              <span className="px-2.5 py-1 text-xs font-semibold bg-danger/10 text-danger rounded-full">
+                {exc.reason}
+              </span>
+              <span className="text-white font-medium">{exc.invoice_id}</span>
+              <span className="text-text-muted text-sm">— {exc.customer_name}</span>
+            </div>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="bg-surface-hover p-3 rounded-lg border border-surface-border/50">
+                <p className="text-text-muted mb-1">Ledger Info</p>
+                <p className="text-white font-mono">Amount: {exc.ledger_amount}</p>
+                <p className="text-white font-mono truncate">Ref: {exc.ledger_ref}</p>
+              </div>
+              <div className="bg-surface-hover p-3 rounded-lg border border-surface-border/50">
+                <p className="text-text-muted mb-1">Best Candidate</p>
+                {exc.best_candidate_txn_id ? (
+                  <>
+                    <p className="text-white font-mono">Txn: {exc.best_candidate_txn_id}</p>
+                    <p className="text-white font-mono">Amount: {exc.best_candidate_amount}</p>
+                  </>
+                ) : (
+                  <p className="text-text-muted italic">No candidate found</p>
+                )}
+              </div>
+            </div>
+            <div>
+              <p className="text-sm text-text-muted font-medium mb-1">Agent Reasoning:</p>
+              <p className="text-sm text-white/90 leading-relaxed bg-background p-3 rounded-md border border-surface-border">
+                {exc.reasoning}
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex flex-col gap-3 min-w-[200px] justify-center border-t md:border-t-0 md:border-l border-surface-border pt-4 md:pt-0 md:pl-6">
+            {exc.status === 'open' ? (
+              <>
+                <button
+                  disabled={loading || !exc.best_candidate_txn_id}
+                  onClick={() => handleResolve(exc.exception_id, 'match', exc.best_candidate_txn_id)}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-success/10 hover:bg-success/20 text-success border border-success/20 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  <Check size={18} />
+                  Approve Match
+                </button>
+                <button
+                  disabled={loading}
+                  onClick={() => handleResolve(exc.exception_id, 'reject', null)}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-surface-hover hover:bg-surface-border text-white border border-surface-border rounded-lg transition-colors disabled:opacity-50"
+                >
+                  <XCircle size={18} />
+                  Write Off
+                </button>
+              </>
+            ) : (
+              <div className="flex items-center justify-center gap-2 text-text-muted bg-surface-hover px-4 py-2 rounded-lg">
+                <CheckCircle2 size={18} />
+                Resolved
+              </div>
+            )}
+            
+            <button
+              onClick={() => onTrace(exc.ledger_id)}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 text-primary hover:bg-primary/10 rounded-lg transition-colors mt-2"
+            >
+              <FileSearch size={18} />
+              View Trace
+            </button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+const MatchesView = ({ onTrace }: { onTrace: (id: number) => void }) => {
+  const [matches, setMatches] = useState<Match[]>([]);
+  useEffect(() => { fetchMatches().then(setMatches); }, []);
+
+  return (
+    <div className="space-y-4 animate-in fade-in">
+      <h2 className="text-2xl font-bold text-white mb-6">Matched Records</h2>
+      <div className="overflow-x-auto bg-surface rounded-xl border border-surface-border">
+        <table className="w-full text-left text-sm text-text-main">
+          <thead className="bg-surface-hover text-text-muted font-medium border-b border-surface-border">
+            <tr>
+              <th className="px-6 py-4">Invoice ID</th>
+              <th className="px-6 py-4">Bank Txn ID</th>
+              <th className="px-6 py-4">Method</th>
+              <th className="px-6 py-4">Confidence</th>
+              <th className="px-6 py-4 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {matches.map(m => (
+              <tr key={m.match_id} className="border-b border-surface-border/50 hover:bg-surface-hover/30">
+                <td className="px-6 py-4 font-medium text-white">{m.invoice_id}</td>
+                <td className="px-6 py-4 font-mono text-xs">{m.bank_txn_id}</td>
+                <td className="px-6 py-4">
+                  <span className={cn(
+                    "px-2.5 py-1 rounded-full text-xs font-semibold",
+                    m.method === 'exact' ? "bg-success/10 text-success" :
+                    m.method === 'fuzzy' ? "bg-primary/10 text-primary" : "bg-warning/10 text-warning"
+                  )}>
+                    {m.method}
+                  </span>
+                </td>
+                <td className="px-6 py-4">{(m.confidence * 100).toFixed(0)}%</td>
+                <td className="px-6 py-4 text-right">
+                  <button onClick={() => onTrace((m as any).ledger_id || parseInt(m.invoice_id.split('-')[2])) /* fallback if ledger_id missing from join */} 
+                    className="text-primary hover:text-primary-hover p-2 rounded-lg hover:bg-primary/10 transition-colors">
+                    <FileSearch size={18} />
+                  </button>
+                </td>
+              </tr>
+            ))}
+            {matches.length === 0 && (
+              <tr><td colSpan={5} className="px-6 py-8 text-center text-text-muted">No matches yet.</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+const TraceModal = ({ ledgerId, onClose }: { ledgerId: number; onClose: () => void }) => {
+  const [logs, setLogs] = useState<AuditLog[]>([]);
+  useEffect(() => { fetchAuditLog(ledgerId).then(setLogs); }, [ledgerId]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-surface border border-surface-border w-full max-w-3xl max-h-[85vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+        <div className="flex items-center justify-between p-6 border-b border-surface-border">
+          <h3 className="text-xl font-bold text-white flex items-center gap-2">
+            <FileSearch size={22} className="text-primary" />
+            Agent Investigation Trace
+          </h3>
+          <button onClick={onClose} className="text-text-muted hover:text-white transition-colors">
+            <X size={24} />
+          </button>
+        </div>
+        
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {logs.length === 0 ? (
+            <div className="text-center text-text-muted py-8">Loading trace...</div>
+          ) : (
+            logs.map((log, i) => (
+              <div key={i} className="flex gap-4">
+                <div className="flex flex-col items-center">
+                  <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-sm shrink-0">
+                    {log.turn}
+                  </div>
+                  {i < logs.length - 1 && <div className="w-px h-full bg-surface-border my-2"></div>}
+                </div>
+                <div className="flex-1 bg-surface-hover border border-surface-border rounded-xl p-4 space-y-3">
+                  <div className="flex justify-between items-start">
+                    <span className="font-mono text-sm font-bold text-primary">{log.tool_name}</span>
+                    <span className="text-xs text-text-muted">{new Date(log.created_at).toLocaleTimeString()}</span>
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <p className="text-xs text-text-muted uppercase font-semibold">Input</p>
+                    <pre className="text-xs text-white bg-background p-2 rounded border border-surface-border/50 overflow-x-auto whitespace-pre-wrap">
+                      {JSON.stringify(log.tool_input, null, 2)}
+                    </pre>
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <p className="text-xs text-text-muted uppercase font-semibold">Result</p>
+                    <pre className="text-xs text-white bg-background p-2 rounded border border-surface-border/50 overflow-x-auto whitespace-pre-wrap max-h-40 overflow-y-auto">
+                      {JSON.stringify(log.tool_result, null, 2)}
+                    </pre>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 function App() {
   const [currentTab, setCurrentTab] = useState<'dashboard' | 'exceptions' | 'matches'>('dashboard');
+  const [traceId, setTraceId] = useState<number | null>(null);
 
   const tabs = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -176,10 +386,15 @@ function App() {
       <main className="flex-1 overflow-auto bg-background">
         <div className="p-8 max-w-7xl mx-auto">
           {currentTab === 'dashboard' && <Dashboard />}
-          {currentTab === 'exceptions' && <ExceptionsQueue />}
-          {currentTab === 'matches' && <MatchesView />}
+          {currentTab === 'exceptions' && <ExceptionsQueue onTrace={setTraceId} />}
+          {currentTab === 'matches' && <MatchesView onTrace={setTraceId} />}
         </div>
       </main>
+
+      {/* Trace Modal */}
+      {traceId !== null && (
+        <TraceModal ledgerId={traceId} onClose={() => setTraceId(null)} />
+      )}
     </div>
   );
 }
