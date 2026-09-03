@@ -163,7 +163,19 @@ async function executeTool(
 async function executeCommitMatch(
   ledgerId: number,
   input: Record<string, unknown>,
-): Promise<void> {
+): Promise<boolean> {
+  const confidence = Number(input.confidence) || 0;
+  
+  if (confidence < 0.85) {
+    // Server-side guardrail: Override the model's attempt to match and flag it as an exception.
+    await executeFlagException(ledgerId, {
+      reason: 'unexplained_discrepancy',
+      reasoning: `Model attempted to commit match with confidence ${confidence}, which is below the strict 0.85 threshold. Original reasoning: ${input.reasoning}`,
+      best_candidate_id: input.bank_txn_id
+    });
+    return false;
+  }
+
   const bankResult = await query<{ id: number }>(
     `SELECT id FROM bank_transactions WHERE txn_id = $1`,
     [input.bank_txn_id],
@@ -173,8 +185,9 @@ async function executeCommitMatch(
   await query(
     `INSERT INTO matches (ledger_id, bank_txn_id, method, confidence, reasoning)
      VALUES ($1, $2, $3, $4, $5)`,
-    [ledgerId, bankId, input.method, input.confidence, input.reasoning],
+    [ledgerId, bankId, input.method, confidence, input.reasoning],
   );
+  return true;
 }
 
 async function executeFlagException(
@@ -367,19 +380,33 @@ export async function reconcileRecord(
         terminalCalled = true;
 
         if (fc.name === 'commit_match') {
-          await executeCommitMatch(ledger.id, input);
-          terminalResult = {
-            ledger_id: ledger.id,
-            invoice_id: ledger.invoice_id,
-            outcome: 'matched',
-            method: input.method as string,
-            confidence: input.confidence as number,
-            reasoning: input.reasoning as string,
-            matched_bank_txn_id: input.bank_txn_id as string,
-            trace,
-            turns: turnCount,
-            precheck: false,
-          };
+          const success = await executeCommitMatch(ledger.id, input);
+          if (success) {
+            terminalResult = {
+              ledger_id: ledger.id,
+              invoice_id: ledger.invoice_id,
+              outcome: 'matched',
+              method: input.method as string,
+              confidence: input.confidence as number,
+              reasoning: input.reasoning as string,
+              matched_bank_txn_id: input.bank_txn_id as string,
+              trace,
+              turns: turnCount,
+              precheck: false,
+            };
+          } else {
+            terminalResult = {
+              ledger_id: ledger.id,
+              invoice_id: ledger.invoice_id,
+              outcome: 'exception',
+              exception_reason: 'unexplained_discrepancy',
+              reasoning: `Guardrail triggered: model attempted to commit match with confidence ${input.confidence}, which is below 0.85 threshold. Original reasoning: ${input.reasoning}`,
+              best_candidate_id: (input.bank_txn_id as string) || null,
+              trace,
+              turns: turnCount,
+              precheck: false,
+            };
+          }
         } else {
           await executeFlagException(ledger.id, input);
           terminalResult = {
