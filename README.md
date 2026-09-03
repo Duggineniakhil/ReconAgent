@@ -31,6 +31,8 @@ graph TD
         Metrics[GET /api/metrics]
         Exceptions[GET /api/exceptions]
         Matches[GET /api/matches]
+        Resolve[POST /api/exceptions/:id/resolve]
+        Audit[GET /api/audit-log/:ledgerId]
     end
 
     subgraph AI Agent Loop
