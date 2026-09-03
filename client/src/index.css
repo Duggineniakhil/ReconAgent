@@ -1,36 +1,39 @@
 @import "tailwindcss";
 
 @theme {
-  --color-background: #0f1117;
-  --color-surface: #1e212b;
-  --color-surface-hover: #292d3b;
-  --color-surface-border: #333848;
-  --color-primary: #3b82f6;
-  --color-primary-hover: #2563eb;
-  --color-text-main: #f3f4f6;
-  --color-text-muted: #9ca3af;
-  --color-success: #10b981;
-  --color-warning: #f59e0b;
-  --color-danger: #ef4444;
+  --color-base: var(--color-base);
+  --color-surface: var(--color-surface);
+  --color-surface-raised: var(--color-surface-raised);
+  --color-border: var(--color-border);
+  --color-text: var(--color-text);
+  --color-text-muted: var(--color-text-muted);
+  --color-accent-matched: var(--color-accent-matched);
+  --color-accent-exception: var(--color-accent-exception);
+  --color-accent-error: var(--color-accent-error);
+
+  --font-sans: 'IBM Plex Sans', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
 }
 
-@layer base {
-  body {
-    @apply bg-background text-text-main font-sans antialiased;
+:root {
+  --color-base: #0B0E14;
+  --color-surface: #12161F;
+  --color-surface-raised: #171C28;
+  --color-border: #232838;
+  --color-text: #E8EAF0;
+  --color-text-muted: #8B93A7;
+  --color-accent-matched: #14B8A6;
+  --color-accent-exception: #F5A623;
+  --color-accent-error: #EF4444;
+}
+
+body {
+  background-color: var(--color-base);
+  color: var(--color-text);
+}
+
+@layer utilities {
+  .card {
+    @apply bg-surface border border-border rounded-md;
   }
-}
-
-/* Scrollbar styling for sleek look */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  @apply bg-surface-border rounded-full;
-}
-::-webkit-scrollbar-thumb:hover {
-  @apply bg-text-muted;
 }
