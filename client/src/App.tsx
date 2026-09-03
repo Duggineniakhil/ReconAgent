@@ -4,7 +4,7 @@ import { fetchMetrics, triggerIngest, triggerReconcile, fetchMatches, fetchExcep
 import type { Metrics, Match, Exception, AuditLog } from './api';
 import clsx from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+
 
 // Simple utility for Tailwind class merging
 export function cn(...inputs: (string | undefined | null | false)[]) {
@@ -47,17 +47,23 @@ const Dashboard = () => {
  setLoading(false);
  };
 
- // Group matches by method for chart
- const methodCounts = matches.reduce((acc, m) => {
- acc[m.method] = (acc[m.method] || 0) + 1;
- return acc;
- }, {} as Record<string, number>);
- 
- const chartData = Object.entries(methodCounts).map(([name, count]) => ({ name, count }));
- const colors = { exact: '#10b981', fuzzy: '#3b82f6', reasoned: '#8b5cf6' };
+  const methodCounts = matches.reduce((acc, m) => {
+    acc[m.method] = (acc[m.method] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+  
+  const totalProcessed = Number(metrics?.total_matches || 0) + Number(metrics?.total_exceptions || 0);
+  const getPercentage = (count: number) => totalProcessed === 0 ? 0 : (count / totalProcessed) * 100;
+  
+  const exactCount = methodCounts['exact'] || 0;
+  const fuzzyCount = methodCounts['fuzzy'] || 0;
+  const reasonedCount = methodCounts['reasoned'] || 0;
+  const exceptionCount = Number(metrics?.total_exceptions || 0);
 
- return (
- <div className="space-y-6 animate-in fade-in duration-500">
+  const hasData = totalProcessed > 0;
+
+  return (
+    <div className="space-y-6 animate-in fade-in duration-500">
   <div className="flex justify-between items-center">
     <div className="flex items-center gap-4">
       <div className="flex items-center gap-2 text-sm text-text-muted font-medium">
@@ -89,50 +95,68 @@ const Dashboard = () => {
     </div>
   </div>
 
- <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
- <MetricCard title="Total Records"value={metrics?.total_records || '0'} />
- <MetricCard title="Total Matches"value={metrics?.total_matches || '0'} />
- <MetricCard title="Exceptions"value={metrics?.total_exceptions || '0'} />
- <MetricCard title="Precision"value={metrics?.precision !== undefined ? ((metrics.precision * 100).toFixed(1) + '%') : '0%'} />
- </div>
+      <div className="flex flex-col md:flex-row bg-surface border border-border rounded-md divide-y md:divide-y-0 md:divide-x divide-border">
+        <div className="flex-1 p-6 flex flex-col justify-center">
+          <span className="text-xs font-sans text-text-muted mb-1">Total records</span>
+          <span className="text-3xl font-mono font-bold text-text">{metrics?.total_records || '0'}</span>
+        </div>
+        <div className="flex-1 p-6 flex flex-col justify-center">
+          <span className="text-xs font-sans text-text-muted mb-1">Total matches</span>
+          <span className="text-3xl font-mono font-bold text-text">{metrics?.total_matches || '0'}</span>
+          <span className="text-[11px] font-sans text-text-muted mt-2">{metrics?.total_matches || '0'} of {metrics?.total_records || '0'} auto-matched</span>
+        </div>
+        <div className="flex-1 p-6 flex flex-col justify-center">
+          <span className="text-xs font-sans text-text-muted mb-1">Exceptions</span>
+          <span className="text-3xl font-mono font-bold text-accent-exception">{metrics?.total_exceptions || '0'}</span>
+          <span className="text-[11px] font-sans text-text-muted mt-2">Requires manual review</span>
+        </div>
+        <div className="flex-1 p-6 flex flex-col justify-center">
+          <span className="text-xs font-sans text-text-muted mb-1">Precision</span>
+          <span className="text-3xl font-mono font-bold text-text">{metrics?.precision !== undefined ? ((metrics.precision * 100).toFixed(1) + '%') : '0%'}</span>
+          <span className="text-[11px] font-sans text-text-muted mt-2">Accuracy of automated matches</span>
+        </div>
+      </div>
 
- <div className="bg-surface p-6 rounded-md border border-border">
- <h2 className="text-xl font-semibold text-text mb-6">Match Method Distribution</h2>
- <div className="h-72">
- {chartData.length > 0 ? (
- <ResponsiveContainer width="100%"height="100%">
- <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
- <XAxis dataKey="name"stroke="#9ca3af"fontSize={12} tickLine={false} axisLine={false} />
- <YAxis stroke="#9ca3af"fontSize={12} tickLine={false} axisLine={false} />
- <Tooltip 
- cursor={{ fill: '#292d3b' }}
- contentStyle={{ backgroundColor: '#1e212b', borderColor: '#333848', color: '#fff', borderRadius: '8px' }}
- />
- <Bar dataKey="count"radius={[4, 4, 0, 0]} maxBarSize={60}>
- {chartData.map((entry, index) => (
- <Cell key={`cell-${index}`} fill={colors[entry.name as keyof typeof colors] || '#3b82f6'} />
- ))}
- </Bar>
- </BarChart>
- </ResponsiveContainer>
- ) : (
- <div className="w-full h-full flex flex-col items-center justify-center text-text-muted border border-dashed border-border rounded-md bg-surface-raised/30">
- <Database size={32} className="mb-2 opacity-50"/>
- <p>No matches yet</p>
- </div>
- )}
- </div>
- </div>
- </div>
- );
+      <div className="bg-surface p-6 rounded-md border border-border">
+        <h2 className="text-sm font-sans font-medium text-text mb-6">Match Method Distribution</h2>
+        
+        {hasData ? (
+          <div className="mt-2">
+            <div className="w-full h-3 flex rounded-full overflow-hidden bg-surface-raised">
+              {getPercentage(exactCount) > 0 && <div style={{ width: `${getPercentage(exactCount)}%` }} className="bg-accent-matched transition-all duration-500" title={`Exact: ${exactCount}`} />}
+              {getPercentage(fuzzyCount) > 0 && <div style={{ width: `${getPercentage(fuzzyCount)}%` }} className="bg-accent-matched/60 transition-all duration-500" title={`Fuzzy: ${fuzzyCount}`} />}
+              {getPercentage(reasonedCount) > 0 && <div style={{ width: `${getPercentage(reasonedCount)}%` }} className="bg-border transition-all duration-500" title={`Reasoned: ${reasonedCount}`} />}
+              {getPercentage(exceptionCount) > 0 && <div style={{ width: `${getPercentage(exceptionCount)}%` }} className="bg-accent-exception transition-all duration-500" title={`Exceptions: ${exceptionCount}`} />}
+            </div>
+            
+            <div className="flex flex-wrap gap-x-8 gap-y-3 mt-6 text-sm font-sans text-text-muted">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-accent-matched"></span>
+                <span>Exact <span className="font-mono text-text ml-1.5">{exactCount}</span></span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-accent-matched/60"></span>
+                <span>Fuzzy <span className="font-mono text-text ml-1.5">{fuzzyCount}</span></span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-border"></span>
+                <span>Reasoned <span className="font-mono text-text ml-1.5">{reasonedCount}</span></span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-accent-exception"></span>
+                <span>Exception <span className="font-mono text-text ml-1.5">{exceptionCount}</span></span>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="w-full py-12 flex items-center justify-center">
+            <p className="text-text-muted text-sm font-sans">Ingest data, then run the agent to see how it matched each record.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 };
-
-const MetricCard = ({ title, value }: { title: string; value: string | number }) => (
- <div className="bg-surface p-6 rounded-md border border-border">
- <h3 className="text-sm font-medium text-text-muted">{title}</h3>
- <p className="text-3xl font-bold font-mono text-text mt-2">{value}</p>
- </div>
-);
 
 const ExceptionsQueue = ({ onTrace }: { onTrace: (id: number) => void }) => {
  const [exceptions, setExceptions] = useState<Exception[]>([]);
