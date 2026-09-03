@@ -63,7 +63,7 @@ const Dashboard = () => {
   const hasData = totalProcessed > 0;
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
+    <div className="space-y-6">
   <div className="flex justify-between items-center">
     <div className="flex items-center gap-4">
       <div className="flex items-center gap-2 text-text-muted">
@@ -289,7 +289,7 @@ const MatchesView = ({ onTrace }: { onTrace: (id: number) => void }) => {
   useEffect(() => { fetchMatches().then(setMatches); }, []);
 
   return (
-    <div className="space-y-4 animate-in fade-in">
+    <div className="space-y-4">
       <h2 className="text-xl font-bold font-serif text-text mb-4">Matched Records</h2>
       <div className="overflow-x-auto rounded-md border border-border/50 bg-surface/50 backdrop-blur-md">
         <table className="w-full text-left text-sm text-text">
@@ -501,14 +501,16 @@ function App() {
   </nav>
   </div>
 
- {/* Main Content */}
- <main className="flex-1 overflow-auto bg-transparent relative z-10">
- <div className="p-8 max-w-7xl mx-auto">
- {currentTab === 'dashboard' && <Dashboard />}
- {currentTab === 'exceptions' && <ExceptionsQueue onTrace={setTraceId} />}
- {currentTab === 'matches' && <MatchesView onTrace={setTraceId} />}
- </div>
- </main>
+  {/* Main Content */}
+  <main className="flex-1 overflow-auto bg-transparent relative z-10">
+  <div className="p-8 max-w-7xl mx-auto">
+  <div key={currentTab} className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+  {currentTab === 'dashboard' && <Dashboard />}
+  {currentTab === 'exceptions' && <ExceptionsQueue onTrace={setTraceId} />}
+  {currentTab === 'matches' && <MatchesView onTrace={setTraceId} />}
+  </div>
+  </div>
+  </main>
 
  {/* Trace Modal */}
  {traceId !== null && (
