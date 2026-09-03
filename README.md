@@ -1,18 +1,32 @@
-# ReconAgent 🤖💼
+<div align="center">
+  <h1>ReconAgent 🤖💼</h1>
+  <p><strong>AI-powered financial reconciliation system</strong></p>
+  
+  [![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
+  [![React](https://img.shields.io/badge/React-18-blue.svg)](https://reactjs.org/)
+  [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14+-blue.svg)](https://www.postgresql.org/)
+  [![Gemini](https://img.shields.io/badge/AI-Gemini%202.0%20Flash-orange.svg)](https://aistudio.google.com/)
+  [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+</div>
 
-ReconAgent is an AI-powered financial reconciliation system that automates the tedious process of matching ledger records (e.g., invoices) against bank transactions. Instead of relying solely on brittle, hardcoded exact-match rules, ReconAgent employs a Large Language Model (Gemini) equipped with specialized tools to investigate and resolve complex discrepancies.
+<br/>
 
-## The Problem
+ReconAgent is an AI-powered financial reconciliation system that automates the tedious process of matching ledger records (e.g., invoices) against bank transactions. Instead of relying solely on brittle, hardcoded exact-match rules, ReconAgent employs a Large Language Model (Gemini 2.0) equipped with specialized tools to autonomously investigate and resolve complex financial discrepancies.
+
+## 🌟 The Problem & Our Solution
 Financial reconciliation typically requires human intervention when records don't perfectly align due to:
-- Rounding differences or FX discrepancies.
-- Date drift (delays between invoice and payment dates).
-- Name variants or abbreviations (e.g., "Acme Corp" vs. "Acme Corporation").
-- Split payments (one transaction paying multiple invoices).
-- Missing transactions or duplicate reference numbers.
+- **Rounding differences** or FX discrepancies.
+- **Date drift** (delays between invoice and payment settlement).
+- **Name variants** or abbreviations (e.g., "Acme Corp" vs. "Acme Corporation").
+- **Missing transactions** or duplicate reference numbers (fraud prevention).
 
-ReconAgent solves this by mimicking a human accountant's thought process. It uses an autonomous agent loop that can query the database, calculate similarities, and make reasoned decisions about whether to approve a match or flag it as an exception.
+**ReconAgent** solves this by mimicking a human accountant's thought process. It uses an autonomous agent loop that queries the database, calculates similarities, checks for fraud heuristics, and makes reasoned decisions about whether to approve a match or flag it for manual review.
 
-## Architecture
+## 🏗️ Architecture
+
+ReconAgent is built with a modern stack featuring a Node.js/Express API, PostgreSQL database, and a Vite + React + Tailwind frontend. The AI agent runs as an event loop powered by **Gemini 2.0 Flash**.
+
+> **Note on Efficiency:** The architecture includes an **Exact-Match Precheck**. Before invoking the LLM, the system queries the database for trivial exact matches (perfect reference and amount alignment). If found, it bypasses the LLM entirely, saving tokens, cost, and latency for obvious reconciliations.
 
 ```mermaid
 graph TD
@@ -36,7 +50,8 @@ graph TD
     end
 
     subgraph AI Agent Loop
-        Agent(Gemini 3.6 Flash)
+        Precheck{Exact Match Precheck}
+        Agent(Gemini 2.0 Flash)
         Agent -->|Tool Call| T1[find_exact_candidates]
         Agent -->|Tool Call| T2[find_fuzzy_candidates]
         Agent -->|Tool Call| T3[compare_names]
@@ -52,7 +67,9 @@ graph TD
     end
 
     Ingest --> DB
-    Reconcile --> Agent
+    Reconcile --> Precheck
+    Precheck -->|Match| DB
+    Precheck -->|Miss| Agent
     Agent <--> DB
     Metrics --> DB
     Exceptions --> DB
@@ -65,7 +82,7 @@ graph TD
     MV --> Matches
 ```
 
-## How to Run Locally
+## 🚀 How to Run Locally
 
 ### Prerequisites
 - Node.js (v18+)
@@ -105,7 +122,7 @@ npm run dev
 ```
 The React dashboard will be available at `http://localhost:5173`.
 
-## How to Run the Generator
+## 🧪 How to Run the Generator
 To populate the database with synthetic testing data, you must generate the CSV files. 
 
 Run the data generation script from the root directory:
@@ -116,7 +133,7 @@ This script uses a fixed random seed to generate ~70 ledger records and ~75 bank
 
 You can then ingest this data via the frontend dashboard by clicking **"Reset & Ingest Data"**, which uploads it to PostgreSQL.
 
-## How Metrics are Computed
+## 📊 How Metrics are Computed
 The metrics system (`/api/metrics`) dynamically evaluates the AI agent's performance by comparing its final decisions against the deterministic `ground_truth.json` answer key generated during the data creation step.
 
 - **True Positives (TP)**: The agent correctly matched a ledger record to the expected bank transaction.
