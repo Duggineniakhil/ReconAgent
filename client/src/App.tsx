@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, AlertCircle, CheckCircle2, Play, Database, FileSearch, X, Check, XCircle } from 'lucide-react';
+import { LayoutDashboard, AlertCircle, CheckCircle2, Play, Database, FileSearch, X } from 'lucide-react';
 import { fetchMetrics, triggerIngest, triggerReconcile, fetchMatches, fetchExceptions, fetchAuditLog, resolveException } from './api';
 import type { Metrics, Match, Exception, AuditLog } from './api';
 import clsx from 'clsx';
@@ -159,99 +159,127 @@ const Dashboard = () => {
 };
 
 const ExceptionsQueue = ({ onTrace }: { onTrace: (id: number) => void }) => {
- const [exceptions, setExceptions] = useState<Exception[]>([]);
- const [loading, setLoading] = useState(false);
+  const [exceptions, setExceptions] = useState<Exception[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
 
- const load = async () => {
- const data = await fetchExceptions();
- setExceptions(data);
- };
+  const load = async () => {
+    const data = await fetchExceptions();
+    setExceptions(data);
+  };
 
- useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, []);
 
- const handleResolve = async (id: number, action: 'match' | 'reject', bankTxnId: string | null) => {
- setLoading(true);
- await resolveException(id, action, bankTxnId || undefined);
- await load();
- setLoading(false);
- };
+  const handleResolve = async (id: number, action: 'match' | 'reject', bankTxnId: string | null) => {
+    setLoading(true);
+    await resolveException(id, action, bankTxnId || undefined);
+    await load();
+    setLoading(false);
+  };
 
- if (exceptions.length === 0) {
- return <div className="text-text-muted mt-8">No open exceptions. Great job!</div>;
- }
+  const toggleExpand = (id: number) => {
+    setExpandedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
- return (
- <div className="space-y-4">
- <h2 className="text-2xl font-bold text-text mb-6">Exceptions Queue</h2>
- {exceptions.map(exc => (
- <div key={exc.exception_id} className="bg-surface p-6 rounded-md border border-border flex flex-col md:flex-row gap-6">
- <div className="flex-1 space-y-4">
- <div className="flex items-center gap-3">
- <span className="px-2.5 py-1 text-xs font-semibold bg-accent-error/10 text-accent-error rounded-full">
- {exc.reason}
- </span>
- <span className="text-text font-mono font-medium">{exc.invoice_id}</span>
- <span className="text-text-muted text-sm">— {exc.customer_name}</span>
- </div>
- <div className="grid grid-cols-2 gap-4 text-sm">
- <div className="bg-surface-raised p-3 rounded-md border border-border/50">
- <p className="text-text-muted mb-1">Ledger Info</p>
- <p className="text-text font-mono">Amount: {exc.ledger_amount}</p>
- <p className="text-text font-mono truncate">Ref: {exc.ledger_ref}</p>
- </div>
- <div className="bg-surface-raised p-3 rounded-md border border-border/50">
- <p className="text-text-muted mb-1">Best Candidate</p>
- {exc.best_candidate_txn_id ? (
- <>
- <p className="text-text font-mono">Txn: {exc.best_candidate_txn_id}</p>
- <p className="text-text font-mono">Amount: {exc.best_candidate_amount}</p>
- </>
- ) : (
- <p className="text-text-muted italic">No candidate found</p>
- )}
- </div>
- </div>
- <div>
- <p className="text-sm text-text-muted font-medium mb-1">Agent Reasoning:</p>
- <p className="text-sm text-text/90 leading-relaxed bg-base p-3 rounded-md border border-border">
- {exc.reasoning}
- </p>
- </div>
- </div>
- 
- <div className="flex flex-col gap-3 min-w-[200px] justify-center border-t md:border-t-0 md:border-l border-border pt-4 md:pt-0 md:pl-6">
- {exc.status === 'open' ? (
- <>
- <button
- disabled={loading || !exc.best_candidate_txn_id}
- onClick={() => handleResolve(exc.exception_id, 'match', exc.best_candidate_txn_id)} className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-accent-matched/10 hover:bg-accent-matched/20 text-accent-matched border border-accent-matched/20 rounded-md transition-colors disabled:opacity-50">
- <Check size={18} />
- Approve Match
- </button>
- <button
- disabled={loading}
- onClick={() => handleResolve(exc.exception_id, 'reject', null)} className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-surface-raised hover:bg-surface-border text-text border border-border rounded-md transition-colors disabled:opacity-50">
- <XCircle size={18} />
- Write Off
- </button>
- </>
- ) : (
- <div className="flex items-center justify-center gap-2 text-text-muted bg-surface-raised px-4 py-2 rounded-md">
- <CheckCircle2 size={18} />
- Resolved
- </div>
- )}
- 
- <button
- onClick={() => onTrace(exc.ledger_id)} className="w-full flex items-center justify-center gap-2 px-4 py-2 text-text hover:bg-surface-raised rounded-md transition-colors mt-2">
- <FileSearch size={18} />
- View Trace
- </button>
- </div>
- </div>
- ))}
- </div>
- );
+  const formatReason = (r: string) => {
+    const spaced = r.replace(/_/g, ' ');
+    return spaced.charAt(0).toUpperCase() + spaced.slice(1).toLowerCase();
+  };
+
+  if (exceptions.length === 0) {
+    return <div className="text-text-muted mt-8 text-sm">No open exceptions. Great job!</div>;
+  }
+
+  return (
+    <div className="space-y-3">
+      <h2 className="text-xl font-bold text-text mb-4">Exceptions Queue</h2>
+      {exceptions.map(exc => {
+        const isExpanded = expandedIds.has(exc.exception_id);
+        
+        return (
+          <div 
+            key={exc.exception_id} 
+            onClick={() => toggleExpand(exc.exception_id)}
+            className="bg-surface rounded-md border border-border p-4 cursor-pointer hover:border-surface-raised transition-colors flex flex-col gap-3"
+          >
+            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="font-mono text-sm font-medium text-text">{exc.ledger_ref}</span>
+                  <span className="px-2 py-0.5 text-xs font-medium bg-accent-exception/10 text-accent-exception rounded-full border border-accent-exception/20">
+                    {formatReason(exc.reason)}
+                  </span>
+                </div>
+                <div className="text-sm text-text-muted">
+                  <p className={cn("leading-relaxed", !isExpanded && "line-clamp-2")}>
+                    <strong className="text-text font-medium mr-1.5">Agent reasoning:</strong>
+                    {exc.reasoning}
+                  </p>
+                  {!isExpanded && <span className="text-text-muted text-xs hover:text-text mt-1 inline-block transition-colors underline decoration-border underline-offset-2">Read more</span>}
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2 shrink-0" onClick={e => e.stopPropagation()}>
+                {exc.status === 'open' ? (
+                  <>
+                    <button
+                      disabled={loading || !exc.best_candidate_txn_id}
+                      onClick={() => handleResolve(exc.exception_id, 'match', exc.best_candidate_txn_id)} 
+                      className="px-3 py-1.5 text-xs font-medium border border-accent-matched text-accent-matched hover:bg-accent-matched hover:text-[#0B0E14] rounded transition-colors disabled:opacity-50"
+                    >
+                      Approve
+                    </button>
+                    <button
+                      disabled={loading}
+                      onClick={() => handleResolve(exc.exception_id, 'reject', null)} 
+                      className="px-3 py-1.5 text-xs font-medium border border-accent-error text-accent-error hover:bg-accent-error hover:text-white rounded transition-colors disabled:opacity-50"
+                    >
+                      Reject
+                    </button>
+                  </>
+                ) : (
+                  <span className="px-3 py-1.5 text-xs font-medium text-text-muted border border-transparent">Resolved</span>
+                )}
+                <button
+                  onClick={() => onTrace(exc.ledger_id)} 
+                  className="px-3 py-1.5 text-xs font-medium border border-border text-text hover:bg-surface-raised rounded transition-colors ml-2"
+                >
+                  Trace
+                </button>
+              </div>
+            </div>
+
+            {isExpanded && exc.best_candidate_txn_id && (
+              <div className="mt-2 p-3 bg-base rounded border border-border/50 text-sm w-full md:w-3/4">
+                <div className="font-medium text-text mb-3 text-xs uppercase tracking-wider text-text-muted">Best Candidate Details</div>
+                <div className="grid grid-cols-2 gap-6">
+                  <div>
+                    <p className="text-text-muted text-xs mb-1">Ledger Target</p>
+                    <p className="font-mono text-text">
+                      {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(exc.ledger_amount)}
+                    </p>
+                    <p className="font-mono text-text-muted text-xs truncate mt-0.5">{exc.ledger_ref}</p>
+                  </div>
+                  <div>
+                    <p className="text-text-muted text-xs mb-1">Found Bank Txn</p>
+                    <p className="font-mono text-text">
+                      {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(exc.best_candidate_amount || 0)}
+                    </p>
+                    <p className="font-mono text-text-muted text-xs mt-0.5">{exc.best_candidate_txn_id}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
 };
 
 const MatchesView = ({ onTrace }: { onTrace: (id: number) => void }) => {
