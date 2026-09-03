@@ -58,23 +58,36 @@ const Dashboard = () => {
 
  return (
  <div className="space-y-6 animate-in fade-in duration-500">
- <div className="flex justify-between items-center">
- <h1 className="text-3xl font-bold tracking-tight text-text">Dashboard</h1>
- <div className="flex gap-4">
- <button
- onClick={handleIngest}
- disabled={ingesting || loading} className="flex items-center gap-2 px-4 py-2 bg-surface-raised hover:bg-surface-border text-text rounded-md transition-colors disabled:opacity-50">
- <Database size={18} />
- {ingesting ? 'Ingesting...' : 'Reset & Ingest Data'}
- </button>
- <button
- onClick={handleRunReconcile}
- disabled={loading || ingesting} className="flex items-center gap-2 px-4 py-2 bg-surface-raised border border-border hover:bg-border text-text text-text rounded-md transition-colors font-medium disabled:opacity-50">
- <Play size={18} className={loading ? 'animate-pulse' : ''} />
- {loading ? 'Reconciling...' : 'Run Agent (Next 4)'}
- </button>
- </div>
- </div>
+  <div className="flex justify-between items-center">
+    <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 text-sm text-text-muted font-medium">
+        <span>ReconAgent</span>
+        <span>/</span>
+        <span className="text-text font-semibold">Dashboard</span>
+      </div>
+      <span className="px-2 py-0.5 text-xs font-mono text-text-muted bg-surface-raised border border-border rounded-full">
+        Demo dataset &middot; synthetic
+      </span>
+    </div>
+    <div className="flex gap-4">
+      <button
+        onClick={handleIngest}
+        disabled={ingesting || loading}
+        className="flex items-center gap-2 px-4 py-2 bg-transparent border border-border hover:bg-surface-raised text-text rounded-md transition-colors disabled:opacity-50 text-sm font-medium"
+      >
+        <Database size={18} />
+        {ingesting ? 'Ingesting...' : 'Reset & Ingest Data'}
+      </button>
+      <button
+        onClick={handleRunReconcile}
+        disabled={loading || ingesting}
+        className="flex items-center gap-2 px-4 py-2 bg-accent-matched hover:brightness-110 text-[#0B0E14] rounded-md transition-all font-medium disabled:opacity-50 text-sm shadow-sm shadow-accent-matched/20"
+      >
+        <Play size={18} className={loading ? 'animate-pulse' : ''} />
+        {loading ? 'Reconciling...' : 'Run Agent (Next 4)'}
+      </button>
+    </div>
+  </div>
 
  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
  <MetricCard title="Total Records"value={metrics?.total_records || '0'} />
@@ -347,22 +360,22 @@ function App() {
  </div>
  
  <nav className="flex-1 px-4 space-y-2 mt-4">
- {tabs.map((tab) => {
- const Icon = tab.icon;
- const active = currentTab === tab.id;
- return (
- <button
- key={tab.id}
- onClick={() => setCurrentTab(tab.id)}
- className={cn("w-full flex items-center gap-3 px-4 py-3 rounded-md transition-all duration-200 text-sm font-medium",
- active 
- ?"bg-surface-raised text-text":"text-text-muted hover:bg-surface-raised hover:text-text")}
- >
- <Icon size={18} className={active ?"text-text":"text-text-muted"} />
- {tab.label}
- </button>
- );
- })}
+  {tabs.map((tab) => {
+  const Icon = tab.icon;
+  const active = currentTab === tab.id;
+  return (
+  <button
+  key={tab.id}
+  onClick={() => setCurrentTab(tab.id)}
+  className={cn("w-full flex items-center gap-3 px-4 py-3 transition-all duration-200 text-sm font-medium border-l-2",
+  active 
+  ?"border-accent-matched bg-surface-raised text-text":"border-transparent text-text-muted hover:bg-surface-raised hover:text-text")}
+  >
+  <Icon size={18} className={active ?"text-text":"text-text-muted"} />
+  {tab.label}
+  </button>
+  );
+  })}
  </nav>
  </div>
 
