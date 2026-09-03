@@ -1,0 +1,352 @@
+[
+  {
+    "ledger_invoice_id": "INV-2026-0001",
+    "expected_bank_txn_id": "TXN-00001",
+    "case_type": "clean_exact"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0002",
+    "expected_bank_txn_id": "TXN-00002",
+    "case_type": "clean_exact"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0003",
+    "expected_bank_txn_id": "TXN-00003",
+    "case_type": "clean_exact"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0004",
+    "expected_bank_txn_id": "TXN-00004",
+    "case_type": "clean_exact"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0005",
+    "expected_bank_txn_id": "TXN-00005",
+    "case_type": "clean_exact"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0006",
+    "expected_bank_txn_id": "TXN-00006",
+    "case_type": "clean_exact"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0007",
+    "expected_bank_txn_id": "TXN-00007",
+    "case_type": "clean_exact"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0008",
+    "expected_bank_txn_id": "TXN-00008",
+    "case_type": "clean_exact"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0009",
+    "expected_bank_txn_id": "TXN-00009",
+    "case_type": "clean_exact"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0010",
+    "expected_bank_txn_id": "TXN-00010",
+    "case_type": "clean_exact"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0011",
+    "expected_bank_txn_id": "TXN-00011",
+    "case_type": "clean_exact"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0012",
+    "expected_bank_txn_id": "TXN-00012",
+    "case_type": "clean_exact"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0013",
+    "expected_bank_txn_id": "TXN-00013",
+    "case_type": "clean_exact"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0014",
+    "expected_bank_txn_id": "TXN-00014",
+    "case_type": "clean_exact"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0015",
+    "expected_bank_txn_id": "TXN-00015",
+    "case_type": "clean_exact"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0016",
+    "expected_bank_txn_id": "TXN-00016",
+    "case_type": "clean_exact"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0017",
+    "expected_bank_txn_id": "TXN-00017",
+    "case_type": "clean_exact"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0018",
+    "expected_bank_txn_id": "TXN-00018",
+    "case_type": "clean_exact"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0019",
+    "expected_bank_txn_id": "TXN-00019",
+    "case_type": "clean_exact"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0020",
+    "expected_bank_txn_id": "TXN-00020",
+    "case_type": "clean_exact"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0021",
+    "expected_bank_txn_id": "TXN-00021",
+    "case_type": "clean_exact"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0022",
+    "expected_bank_txn_id": "TXN-00022",
+    "case_type": "clean_exact"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0023",
+    "expected_bank_txn_id": "TXN-00023",
+    "case_type": "clean_exact"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0024",
+    "expected_bank_txn_id": "TXN-00024",
+    "case_type": "clean_exact"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0025",
+    "expected_bank_txn_id": "TXN-00025",
+    "case_type": "clean_exact"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0026",
+    "expected_bank_txn_id": "TXN-00026",
+    "case_type": "clean_exact"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0027",
+    "expected_bank_txn_id": "TXN-00027",
+    "case_type": "clean_exact"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0028",
+    "expected_bank_txn_id": "TXN-00028",
+    "case_type": "clean_exact"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0029",
+    "expected_bank_txn_id": "TXN-00029",
+    "case_type": "clean_exact"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0030",
+    "expected_bank_txn_id": "TXN-00030",
+    "case_type": "clean_exact"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0031",
+    "expected_bank_txn_id": "TXN-00031",
+    "case_type": "clean_exact"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0032",
+    "expected_bank_txn_id": "TXN-00032",
+    "case_type": "clean_exact"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0033",
+    "expected_bank_txn_id": "TXN-00033",
+    "case_type": "clean_exact"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0034",
+    "expected_bank_txn_id": "TXN-00034",
+    "case_type": "clean_exact"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0035",
+    "expected_bank_txn_id": "TXN-00035",
+    "case_type": "clean_exact"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0036",
+    "expected_bank_txn_id": "TXN-00036",
+    "case_type": "clean_exact"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0037",
+    "expected_bank_txn_id": "TXN-00037",
+    "case_type": "clean_exact"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0038",
+    "expected_bank_txn_id": "TXN-00038",
+    "case_type": "clean_exact"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0039",
+    "expected_bank_txn_id": "TXN-00039",
+    "case_type": "clean_exact"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0040",
+    "expected_bank_txn_id": "TXN-00040",
+    "case_type": "clean_exact"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0041",
+    "expected_bank_txn_id": "TXN-00041",
+    "case_type": "clean_exact"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0042",
+    "expected_bank_txn_id": "TXN-00042",
+    "case_type": "clean_exact"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0043",
+    "expected_bank_txn_id": "TXN-00043",
+    "case_type": "rounding_diff"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0044",
+    "expected_bank_txn_id": "TXN-00044",
+    "case_type": "rounding_diff"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0045",
+    "expected_bank_txn_id": "TXN-00045",
+    "case_type": "rounding_diff"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0046",
+    "expected_bank_txn_id": "TXN-00046",
+    "case_type": "rounding_diff"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0047",
+    "expected_bank_txn_id": "TXN-00047",
+    "case_type": "rounding_diff"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0048",
+    "expected_bank_txn_id": "TXN-00048",
+    "case_type": "rounding_diff"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0049",
+    "expected_bank_txn_id": "TXN-00049",
+    "case_type": "rounding_diff"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0050",
+    "expected_bank_txn_id": "TXN-00050",
+    "case_type": "date_drift"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0051",
+    "expected_bank_txn_id": "TXN-00051",
+    "case_type": "date_drift"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0052",
+    "expected_bank_txn_id": "TXN-00052",
+    "case_type": "date_drift"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0053",
+    "expected_bank_txn_id": "TXN-00053",
+    "case_type": "date_drift"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0054",
+    "expected_bank_txn_id": "TXN-00054",
+    "case_type": "date_drift"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0055",
+    "expected_bank_txn_id": "TXN-00055",
+    "case_type": "date_drift"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0056",
+    "expected_bank_txn_id": "TXN-00056",
+    "case_type": "date_drift"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0057",
+    "expected_bank_txn_id": "TXN-00057",
+    "case_type": "name_variant"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0058",
+    "expected_bank_txn_id": "TXN-00058",
+    "case_type": "name_variant"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0059",
+    "expected_bank_txn_id": "TXN-00059",
+    "case_type": "name_variant"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0060",
+    "expected_bank_txn_id": "TXN-00060",
+    "case_type": "name_variant"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0061",
+    "expected_bank_txn_id": null,
+    "case_type": "split_payment"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0062",
+    "expected_bank_txn_id": null,
+    "case_type": "split_payment"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0063",
+    "expected_bank_txn_id": null,
+    "case_type": "split_payment"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0064",
+    "expected_bank_txn_id": null,
+    "case_type": "missing_bank_txn"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0065",
+    "expected_bank_txn_id": null,
+    "case_type": "missing_bank_txn"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0066",
+    "expected_bank_txn_id": null,
+    "case_type": "missing_bank_txn"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0067",
+    "expected_bank_txn_id": null,
+    "case_type": "missing_bank_txn"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0068",
+    "expected_bank_txn_id": null,
+    "case_type": "duplicate_ref"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0069",
+    "expected_bank_txn_id": null,
+    "case_type": "duplicate_ref"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0070",
+    "expected_bank_txn_id": null,
+    "case_type": "duplicate_ref"
+  }
+]
