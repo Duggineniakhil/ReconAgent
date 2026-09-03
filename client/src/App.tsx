@@ -79,7 +79,7 @@ const Dashboard = () => {
       <button
         onClick={handleIngest}
         disabled={ingesting || loading}
-        className="flex items-center gap-2 px-4 py-2 bg-transparent border border-border hover:bg-surface-raised text-text rounded-md transition-colors disabled:opacity-50 text-sm font-medium"
+        className="flex items-center gap-2 px-4 py-2 bg-transparent border border-border hover:bg-surface-raised text-text rounded-md transition-colors disabled:opacity-50 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-matched focus-visible:ring-offset-2 focus-visible:ring-offset-base"
       >
         <Database size={18} />
         {ingesting ? 'Ingesting...' : 'Reset & Ingest Data'}
@@ -87,7 +87,7 @@ const Dashboard = () => {
       <button
         onClick={handleRunReconcile}
         disabled={loading || ingesting}
-        className="flex items-center gap-2 px-4 py-2 bg-accent-matched hover:brightness-110 text-[#0B0E14] rounded-md transition-all font-medium disabled:opacity-50 text-sm shadow-sm shadow-accent-matched/20"
+        className="flex items-center gap-2 px-4 py-2 bg-accent-matched hover:brightness-110 text-[#0B0E14] rounded-md transition-all font-medium disabled:opacity-50 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-matched focus-visible:ring-offset-2 focus-visible:ring-offset-base"
       >
         <Play size={18} className={loading ? 'animate-pulse' : ''} />
         {loading ? 'Reconciling...' : 'Run Agent (Next 4)'}
@@ -205,7 +205,9 @@ const ExceptionsQueue = ({ onTrace }: { onTrace: (id: number) => void }) => {
           <div 
             key={exc.exception_id} 
             onClick={() => toggleExpand(exc.exception_id)}
-            className="bg-surface rounded-md border border-border p-4 cursor-pointer hover:border-surface-raised transition-colors flex flex-col gap-3"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleExpand(exc.exception_id); } }}
+            className="bg-surface rounded-md border border-border p-4 cursor-pointer hover:border-surface-raised transition-colors flex flex-col gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-matched focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
           >
             <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
               <div className="flex-1">
@@ -230,14 +232,14 @@ const ExceptionsQueue = ({ onTrace }: { onTrace: (id: number) => void }) => {
                     <button
                       disabled={loading || !exc.best_candidate_txn_id}
                       onClick={() => handleResolve(exc.exception_id, 'match', exc.best_candidate_txn_id)} 
-                      className="px-3 py-1.5 text-xs font-medium border border-accent-matched text-accent-matched hover:bg-accent-matched hover:text-[#0B0E14] rounded transition-colors disabled:opacity-50"
+                      className="px-3 py-1.5 text-xs font-medium border border-accent-matched text-accent-matched hover:bg-accent-matched hover:text-[#0B0E14] rounded transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-matched focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
                     >
                       Approve
                     </button>
                     <button
                       disabled={loading}
                       onClick={() => handleResolve(exc.exception_id, 'reject', null)} 
-                      className="px-3 py-1.5 text-xs font-medium border border-accent-error text-accent-error hover:bg-accent-error hover:text-white rounded transition-colors disabled:opacity-50"
+                      className="px-3 py-1.5 text-xs font-medium border border-accent-error text-accent-error hover:bg-accent-error hover:text-white rounded transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-error focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
                     >
                       Reject
                     </button>
@@ -247,7 +249,7 @@ const ExceptionsQueue = ({ onTrace }: { onTrace: (id: number) => void }) => {
                 )}
                 <button
                   onClick={() => onTrace(exc.ledger_id)} 
-                  className="px-3 py-1.5 text-xs font-medium border border-border text-text hover:bg-surface-raised rounded transition-colors ml-2"
+                  className="px-3 py-1.5 text-xs font-medium border border-border text-text hover:bg-surface-raised rounded transition-colors ml-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
                 >
                   Trace
                 </button>
@@ -328,7 +330,8 @@ const MatchesView = ({ onTrace }: { onTrace: (id: number) => void }) => {
                 </td>
                 <td className="px-4 py-1.5 text-right">
                   <button onClick={() => onTrace((m as any).ledger_id || parseInt(m.invoice_id.split('-')[2]))} 
-                    className="text-text-muted hover:text-accent-matched text-xs font-medium transition-colors underline decoration-border underline-offset-2">
+                    className="text-text-muted hover:text-accent-matched text-xs font-medium transition-colors underline decoration-border underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-matched focus-visible:ring-offset-2 focus-visible:ring-offset-surface rounded-sm"
+                  >
                     View trace
                   </button>
                 </td>
@@ -380,7 +383,7 @@ const TraceModal = ({ ledgerId, onClose }: { ledgerId: number; onClose: () => vo
             <FileSearch size={22} className="text-text-muted" />
             Investigation Trace
           </h3>
-          <button onClick={onClose} className="text-text-muted hover:text-text transition-colors">
+          <button onClick={onClose} className="text-text-muted hover:text-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border focus-visible:ring-offset-2 focus-visible:ring-offset-surface rounded-sm">
             <X size={24} />
           </button>
         </div>
@@ -421,7 +424,7 @@ const TraceModal = ({ ledgerId, onClose }: { ledgerId: number; onClose: () => vo
                       
                       <button 
                         onClick={() => toggleStep(i)}
-                        className="text-xs font-medium text-text-muted hover:text-text transition-colors mt-3 underline decoration-border underline-offset-2"
+                        className="text-xs font-medium text-text-muted hover:text-text transition-colors mt-3 underline decoration-border underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border focus-visible:ring-offset-2 focus-visible:ring-offset-surface rounded-sm"
                       >
                         {isExpanded ? 'Hide raw details' : 'View input/output'}
                       </button>
@@ -465,37 +468,38 @@ function App() {
  ] as const;
 
  return (
- <div className="flex h-screen bg-base text-text overflow-hidden font-sans">
- {/* Sidebar */}
- <div className="w-64 bg-surface border-r border-border flex flex-col">
- <div className="p-6">
- <div className="flex items-center gap-3 text-text">
- <div className="w-8 h-8 rounded-md bg-border flex items-center justify-center">
- <Database size={20} className="text-text"/>
- </div>
- <span className="text-xl font-bold text-text tracking-tight">ReconAgent</span>
- </div>
- </div>
- 
- <nav className="flex-1 px-4 space-y-2 mt-4">
-  {tabs.map((tab) => {
-  const Icon = tab.icon;
-  const active = currentTab === tab.id;
-  return (
-  <button
-  key={tab.id}
-  onClick={() => setCurrentTab(tab.id)}
-  className={cn("w-full flex items-center gap-3 px-4 py-3 transition-all duration-200 text-sm font-medium border-l-2",
-  active 
-  ?"border-accent-matched bg-surface-raised text-text":"border-transparent text-text-muted hover:bg-surface-raised hover:text-text")}
-  >
-  <Icon size={18} className={active ?"text-text":"text-text-muted"} />
-  {tab.label}
-  </button>
-  );
-  })}
- </nav>
- </div>
+  <div className="flex h-screen bg-base text-text overflow-hidden font-sans">
+  {/* Sidebar */}
+  <div className="w-16 md:w-64 flex-shrink-0 bg-surface border-r border-border flex flex-col transition-all duration-300">
+  <div className="p-4 md:p-6 border-b border-border">
+  <div className="flex items-center justify-center md:justify-start gap-3 text-text">
+  <div className="w-8 h-8 rounded-md bg-border flex items-center justify-center shrink-0">
+  <Database size={20} className="text-text"/>
+  </div>
+  <span className="hidden md:inline text-xl font-bold text-text tracking-tight">ReconAgent</span>
+  </div>
+  </div>
+  
+  <nav className="flex-1 px-2 md:px-4 space-y-2 mt-4">
+   {tabs.map((tab) => {
+   const Icon = tab.icon;
+   const active = currentTab === tab.id;
+   return (
+   <button
+   key={tab.id}
+   onClick={() => setCurrentTab(tab.id)}
+   className={cn("w-full flex items-center justify-center md:justify-start gap-3 px-2 md:px-4 py-3 transition-all duration-200 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-matched focus-visible:ring-offset-2 focus-visible:ring-offset-surface",
+   active 
+   ?"md:border-l-2 md:border-accent-matched bg-surface-raised text-text md:pl-[14px]":"md:border-l-2 md:border-transparent text-text-muted hover:bg-surface-raised hover:text-text")}
+   title={tab.label}
+   >
+   <Icon size={18} className={active ?"text-text":"text-text-muted"} />
+   <span className="hidden md:inline">{tab.label}</span>
+   </button>
+   );
+   })}
+  </nav>
+  </div>
 
  {/* Main Content */}
  <main className="flex-1 overflow-auto bg-base">
