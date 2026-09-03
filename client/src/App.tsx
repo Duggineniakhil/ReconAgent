@@ -255,51 +255,65 @@ const ExceptionsQueue = ({ onTrace }: { onTrace: (id: number) => void }) => {
 };
 
 const MatchesView = ({ onTrace }: { onTrace: (id: number) => void }) => {
- const [matches, setMatches] = useState<Match[]>([]);
- useEffect(() => { fetchMatches().then(setMatches); }, []);
+  const [matches, setMatches] = useState<Match[]>([]);
+  useEffect(() => { fetchMatches().then(setMatches); }, []);
 
- return (
- <div className="space-y-4 animate-in fade-in">
- <h2 className="text-2xl font-bold text-text mb-6">Matched Records</h2>
- <div className="overflow-x-auto bg-surface rounded-md border border-border">
- <table className="w-full text-left text-sm text-text">
- <thead className="bg-surface-raised text-text-muted font-medium border-b border-border">
- <tr>
- <th className="px-6 py-4">Invoice ID</th>
- <th className="px-6 py-4">Bank Txn ID</th>
- <th className="px-6 py-4">Method</th>
- <th className="px-6 py-4">Confidence</th>
- <th className="px-6 py-4 text-right">Actions</th>
- </tr>
- </thead>
- <tbody>
- {matches.map(m => (
- <tr key={m.match_id} className="border-b border-border/50 hover:bg-surface-raised/30">
- <td className="px-6 py-4 font-mono font-medium text-text">{m.invoice_id}</td>
- <td className="px-6 py-4 font-mono text-xs">{m.bank_txn_id}</td>
- <td className="px-6 py-4">
- <span className={cn("px-2.5 py-1 rounded-full text-xs font-semibold",
- m.method === 'exact' ?"bg-accent-matched/10 text-accent-matched":
- m.method === 'fuzzy' ?"bg-surface-raised text-text":"bg-accent-exception/10 text-accent-exception")}>
- {m.method}
- </span>
- </td>
- <td className="px-6 py-4 font-mono">{(m.confidence * 100).toFixed(0)}%</td>
- <td className="px-6 py-4 text-right">
- <button onClick={() => onTrace((m as any).ledger_id || parseInt(m.invoice_id.split('-')[2])) /* fallback if ledger_id missing from join */} className="text-text hover:text-text p-2 rounded-md hover:bg-surface-raised transition-colors">
- <FileSearch size={18} />
- </button>
- </td>
- </tr>
- ))}
- {matches.length === 0 && (
- <tr><td colSpan={5} className="px-6 py-8 text-center text-text-muted">No matches yet.</td></tr>
- )}
- </tbody>
- </table>
- </div>
- </div>
- );
+  return (
+    <div className="space-y-4 animate-in fade-in">
+      <h2 className="text-xl font-bold text-text mb-4">Matched Records</h2>
+      <div className="overflow-x-auto rounded-md border border-border">
+        <table className="w-full text-left text-sm text-text">
+          <thead className="bg-surface-raised text-text-muted font-medium text-xs">
+            <tr>
+              <th className="px-4 py-2 font-normal">Ledger ID</th>
+              <th className="px-4 py-2 font-normal">Bank Txn ID</th>
+              <th className="px-4 py-2 font-normal text-right">Amount</th>
+              <th className="px-4 py-2 font-normal">Method</th>
+              <th className="px-4 py-2 font-normal">Confidence</th>
+              <th className="px-4 py-2 font-normal text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {matches.map((m, i) => (
+              <tr key={m.match_id} className={cn("hover:brightness-110 transition-colors", i % 2 === 0 ? "bg-surface" : "bg-base")}>
+                <td className="px-4 py-1.5 font-mono text-xs font-medium text-text">{m.invoice_id}</td>
+                <td className="px-4 py-1.5 font-mono text-xs">{m.bank_txn_id}</td>
+                <td className="px-4 py-1.5 font-mono text-xs text-right">
+                  {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(m.ledger_amount)}
+                </td>
+                <td className="px-4 py-1.5">
+                  <span className={cn(
+                    "px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider",
+                    m.method === 'exact' ? "bg-accent-matched/10 text-accent-matched" :
+                    m.method === 'fuzzy' ? "bg-accent-matched/20 text-accent-matched" : "bg-surface-raised text-text"
+                  )}>
+                    {m.method}
+                  </span>
+                </td>
+                <td className="px-4 py-1.5">
+                  <div className="flex items-center gap-3 max-w-[120px]">
+                    <span className="font-mono text-xs w-8 text-right">{(m.confidence * 100).toFixed(0)}%</span>
+                    <div className="flex-1 h-1 bg-surface-raised rounded-full overflow-hidden">
+                      <div className="h-full bg-accent-matched" style={{ width: `${m.confidence * 100}%` }} />
+                    </div>
+                  </div>
+                </td>
+                <td className="px-4 py-1.5 text-right">
+                  <button onClick={() => onTrace((m as any).ledger_id || parseInt(m.invoice_id.split('-')[2]))} 
+                    className="text-text-muted hover:text-accent-matched text-xs font-medium transition-colors underline decoration-border underline-offset-2">
+                    View trace
+                  </button>
+                </td>
+              </tr>
+            ))}
+            {matches.length === 0 && (
+              <tr><td colSpan={6} className="px-4 py-6 text-center text-text-muted bg-surface">No matches yet.</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
 };
 
 const TraceModal = ({ ledgerId, onClose }: { ledgerId: number; onClose: () => void }) => {
