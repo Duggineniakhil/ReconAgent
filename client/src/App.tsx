@@ -345,61 +345,113 @@ const MatchesView = ({ onTrace }: { onTrace: (id: number) => void }) => {
 };
 
 const TraceModal = ({ ledgerId, onClose }: { ledgerId: number; onClose: () => void }) => {
- const [logs, setLogs] = useState<AuditLog[]>([]);
- useEffect(() => { fetchAuditLog(ledgerId).then(setLogs); }, [ledgerId]);
+  const [logs, setLogs] = useState<AuditLog[]>([]);
+  const [expandedSteps, setExpandedSteps] = useState<Set<number>>(new Set());
 
- return (
- <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
- <div className="bg-surface border border-border w-full max-w-3xl max-h-[85vh] rounded-md border border-border flex flex-col overflow-hidden">
- <div className="flex items-center justify-between p-6 border-b border-border">
- <h3 className="text-xl font-bold text-text flex items-center gap-2">
- <FileSearch size={22} className="text-text"/>
- Agent Investigation Trace
- </h3>
- <button onClick={onClose} className="text-text-muted hover:text-text transition-colors">
- <X size={24} />
- </button>
- </div>
- 
- <div className="flex-1 overflow-y-auto p-6 space-y-6">
- {logs.length === 0 ? (
- <div className="text-center text-text-muted py-8">Loading trace...</div>
- ) : (
- logs.map((log, i) => (
- <div key={i} className="flex gap-4">
- <div className="flex flex-col items-center">
- <div className="w-8 h-8 rounded-full bg-border text-text flex items-center justify-center font-mono font-bold text-sm shrink-0">
- {log.turn}
- </div>
- {i < logs.length - 1 && <div className="w-px h-full bg-surface-border my-2"></div>}
- </div>
- <div className="flex-1 bg-surface-raised border border-border rounded-md p-4 space-y-3">
- <div className="flex justify-between items-start">
- <span className="font-mono text-sm font-bold text-text">{log.tool_name}</span>
- <span className="text-xs font-mono text-text-muted">{new Date(log.created_at).toLocaleTimeString()}</span>
- </div>
- 
- <div className="space-y-1">
- <p className="text-xs text-text-muted uppercase font-semibold">Input</p>
- <pre className="text-xs text-text bg-base p-2 rounded border border-border/50 overflow-x-auto whitespace-pre-wrap">
- {JSON.stringify(log.tool_input, null, 2)}
- </pre>
- </div>
- 
- <div className="space-y-1">
- <p className="text-xs text-text-muted uppercase font-semibold">Result</p>
- <pre className="text-xs text-text bg-base p-2 rounded border border-border/50 overflow-x-auto whitespace-pre-wrap max-h-40 overflow-y-auto">
- {JSON.stringify(log.tool_result, null, 2)}
- </pre>
- </div>
- </div>
- </div>
- ))
- )}
- </div>
- </div>
- </div>
- );
+  useEffect(() => { fetchAuditLog(ledgerId).then(setLogs); }, [ledgerId]);
+
+  const toggleStep = (index: number) => {
+    setExpandedSteps(prev => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
+  };
+
+  const getSummary = (name: string, input: any) => {
+    try {
+      if (name === 'find_exact_candidates') return `Searched exact amount ${input.ledger_amount} and ref ${input.ledger_ref}`;
+      if (name === 'find_fuzzy_candidates') return `Searched variations near ${input.amount}`;
+      if (name === 'compare_names') return `Compared "${input.name1}" with "${input.name2}"`;
+      if (name === 'check_duplicate_ref') return `Checked for duplicates of ${input.reference_number}`;
+      if (name === 'commit_match') return `Committed match to txn ${input.bank_txn_id}`;
+      if (name === 'flag_exception') return `Flagged as exception: ${input.reason}`;
+      if (name === 'precheck_exact') return `Database index found perfect match`;
+    } catch (e) {}
+    return 'Action executed';
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-surface border border-border w-full max-w-3xl max-h-[85vh] rounded-md flex flex-col overflow-hidden">
+        <div className="flex items-center justify-between p-6 border-b border-border">
+          <h3 className="text-xl font-bold text-text flex items-center gap-2">
+            <FileSearch size={22} className="text-text-muted" />
+            Investigation Trace
+          </h3>
+          <button onClick={onClose} className="text-text-muted hover:text-text transition-colors">
+            <X size={24} />
+          </button>
+        </div>
+        
+        <div className="flex-1 overflow-y-auto p-8">
+          {logs.length === 0 ? (
+            <div className="text-center text-text-muted py-8">Loading trace...</div>
+          ) : (
+            <div className="space-y-0">
+              {logs.map((log, i) => {
+                const isTerminal = ['commit_match', 'flag_exception', 'precheck_exact'].includes(log.tool_name);
+                const isExpanded = expandedSteps.has(i);
+                
+                return (
+                  <div key={i} className="flex gap-6 relative">
+                    {i < logs.length - 1 && (
+                      <div className="absolute left-[9px] top-6 bottom-[-24px] w-px bg-border"></div>
+                    )}
+                    
+                    <div className="relative z-10 flex flex-col items-center mt-1">
+                      {isTerminal ? (
+                        <div className="w-5 h-5 rounded-full bg-text border-[4px] border-surface"></div>
+                      ) : (
+                        <div className="w-5 h-5 rounded-full bg-surface border-2 border-border"></div>
+                      )}
+                    </div>
+                    
+                    <div className="flex-1 pb-10">
+                      <div className="flex items-center gap-3 mb-1">
+                        <span className="font-mono text-[10px] px-1.5 py-0.5 bg-surface-raised text-text-muted rounded">T{log.turn}</span>
+                        <span className="font-mono font-medium text-text">{log.tool_name}</span>
+                        <span className="text-xs font-mono text-text-muted ml-auto">{new Date(log.created_at).toLocaleTimeString()}</span>
+                      </div>
+                      
+                      <div className="text-sm text-text-muted font-sans">
+                        {getSummary(log.tool_name, log.tool_input)}
+                      </div>
+                      
+                      <button 
+                        onClick={() => toggleStep(i)}
+                        className="text-xs font-medium text-text-muted hover:text-text transition-colors mt-3 underline decoration-border underline-offset-2"
+                      >
+                        {isExpanded ? 'Hide raw details' : 'View input/output'}
+                      </button>
+                      
+                      {isExpanded && (
+                        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <p className="text-[10px] text-text-muted uppercase font-semibold tracking-wider">Input</p>
+                            <pre className="text-xs font-mono text-text bg-base p-3 rounded border border-border overflow-x-auto whitespace-pre-wrap">
+                              {JSON.stringify(log.tool_input, null, 2)}
+                            </pre>
+                          </div>
+                          <div className="space-y-2">
+                            <p className="text-[10px] text-text-muted uppercase font-semibold tracking-wider">Result</p>
+                            <pre className="text-xs font-mono text-text bg-base p-3 rounded border border-border overflow-x-auto whitespace-pre-wrap max-h-48 overflow-y-auto">
+                              {JSON.stringify(log.tool_result, null, 2)}
+                            </pre>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 };
 
 function App() {
