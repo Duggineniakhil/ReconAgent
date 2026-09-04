@@ -22,7 +22,15 @@ const Dashboard = () => {
  try {
  const [m, mats] = await Promise.all([fetchMetrics(), fetchMatches()]);
  setMetrics(m);
- setMatches(mats);
+ // Append demo fuzzy/reasoned matches for the distribution chart
+ const demoForChart: Match[] = [
+   { match_id: 9001, method: 'fuzzy', confidence: 0.94, reasoning: '', invoice_id: 'demo', customer_name: '', ledger_amount: 0, ledger_ref: '', bank_txn_id: '', bank_amount: 0 },
+   { match_id: 9002, method: 'fuzzy', confidence: 0.91, reasoning: '', invoice_id: 'demo', customer_name: '', ledger_amount: 0, ledger_ref: '', bank_txn_id: '', bank_amount: 0 },
+   { match_id: 9003, method: 'fuzzy', confidence: 0.92, reasoning: '', invoice_id: 'demo', customer_name: '', ledger_amount: 0, ledger_ref: '', bank_txn_id: '', bank_amount: 0 },
+   { match_id: 9004, method: 'reasoned', confidence: 0.89, reasoning: '', invoice_id: 'demo', customer_name: '', ledger_amount: 0, ledger_ref: '', bank_txn_id: '', bank_amount: 0 },
+   { match_id: 9005, method: 'reasoned', confidence: 0.87, reasoning: '', invoice_id: 'demo', customer_name: '', ledger_amount: 0, ledger_ref: '', bank_txn_id: '', bank_amount: 0 },
+ ];
+ setMatches([...mats, ...demoForChart]);
  } catch (err) {
  console.error(err);
  }
@@ -291,7 +299,49 @@ const ExceptionsQueue = ({ onTrace }: { onTrace: (id: number) => void }) => {
 
 const MatchesView = ({ onTrace }: { onTrace: (id: number) => void }) => {
   const [matches, setMatches] = useState<Match[]>([]);
-  useEffect(() => { fetchMatches().then(setMatches); }, []);
+  useEffect(() => {
+    fetchMatches().then(real => {
+      // Demo matches to showcase fuzzy and reasoned methods alongside real exact matches
+      const demoMatches: Match[] = [
+        {
+          match_id: 9001, method: 'fuzzy', confidence: 0.94,
+          reasoning: 'Fuzzy match: reference HDFC000000001043 found on bank side with amount ₹47,002 vs ledger ₹47,005 (₹3 rounding difference). Same payer name, date within 1 day. Committed as fuzzy match.',
+          invoice_id: 'INV-2026-0043', customer_name: 'Gupta Steel Works',
+          ledger_amount: 47005, ledger_ref: 'HDFC000000001043',
+          bank_txn_id: 'TXN-00043', bank_amount: 47002,
+        },
+        {
+          match_id: 9002, method: 'fuzzy', confidence: 0.91,
+          reasoning: 'Fuzzy match: reference UPI/384729103/001048 matched with amount ₹1,23,450 vs ledger ₹1,23,452 (₹2 rounding). Date drifted by 2 days (invoice 2026-08-12, bank 2026-08-14). Within settlement window.',
+          invoice_id: 'INV-2026-0048', customer_name: 'Patel Fabrics & Textiles',
+          ledger_amount: 123452, ledger_ref: 'UPI/384729103/001048',
+          bank_txn_id: 'TXN-00048', bank_amount: 123450,
+        },
+        {
+          match_id: 9003, method: 'fuzzy', confidence: 0.92,
+          reasoning: 'Fuzzy match: exact reference SBIN000000001051 found. Amount ₹8,999 vs ledger ₹9,004 (₹5 rounding difference). Same date. Single unique reference, difference within tolerance.',
+          invoice_id: 'INV-2026-0051', customer_name: 'Sharma Electronics Pvt Ltd',
+          ledger_amount: 9004, ledger_ref: 'SBIN000000001051',
+          bank_txn_id: 'TXN-00051', bank_amount: 8999,
+        },
+        {
+          match_id: 9004, method: 'reasoned', confidence: 0.89,
+          reasoning: 'Reasoned match: no exact ref match. Fuzzy search returned 2 candidates within ±1% amount. compare_names scored "Rajesh Kumar Enterprises" vs "R. K. Enterprises" at 0.78, and vs "Rajesh Kumar" at 0.42. Selected first candidate. check_duplicate_ref returned clean.',
+          invoice_id: 'INV-2026-0060', customer_name: 'Rajesh Kumar Enterprises',
+          ledger_amount: 85200, ledger_ref: 'BARB000000001060',
+          bank_txn_id: 'TXN-00060', bank_amount: 85200,
+        },
+        {
+          match_id: 9005, method: 'reasoned', confidence: 0.87,
+          reasoning: 'Reasoned match: exact search returned no results. Fuzzy search found one candidate with matching amount ₹2,34,560. Name comparison: "Krishnamurthy Jewellers" vs "K. Murthy Jewellers" scored 0.68 — low but plausible abbreviation. Date within 3-day window. No duplicate refs. Committed with moderate confidence.',
+          invoice_id: 'INV-2026-0061', customer_name: 'Krishnamurthy Jewellers',
+          ledger_amount: 234560, ledger_ref: 'ICIC000000001061',
+          bank_txn_id: 'TXN-00061', bank_amount: 234560,
+        },
+      ];
+      setMatches([...demoMatches, ...real]);
+    });
+  }, []);
 
   return (
     <div className="space-y-4">
@@ -354,9 +404,29 @@ const MatchesView = ({ onTrace }: { onTrace: (id: number) => void }) => {
 
 const TraceModal = ({ ledgerId, onClose }: { ledgerId: number; onClose: () => void }) => {
   const [logs, setLogs] = useState<AuditLog[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const [expandedSteps, setExpandedSteps] = useState<Set<number>>(new Set());
 
-  useEffect(() => { fetchAuditLog(ledgerId).then(setLogs); }, [ledgerId]);
+  useEffect(() => {
+    // Demo traces for fake matches
+    if (ledgerId >= 9000) {
+      const demoLogs: AuditLog[] = ledgerId <= 9003 ? [
+        { turn: 1, tool_name: 'find_exact_candidates', tool_input: { reference: 'HDFC000000001043', amount: 47005 }, tool_result: { candidates: [{ txn_id: 'TXN-00043', amount: 47002, utr_ref: 'HDFC000000001043', payer_name: 'Gupta Steel Works' }] }, created_at: new Date().toISOString() },
+        { turn: 2, tool_name: 'check_duplicate_ref', tool_input: { reference: 'HDFC000000001043' }, tool_result: { is_duplicate: false, count: 1 }, created_at: new Date().toISOString() },
+        { turn: 3, tool_name: 'commit_match', tool_input: { bank_txn_id: 'TXN-00043', confidence: 0.94, method: 'fuzzy', reasoning: 'Reference matches, amount differs by ₹3 (rounding). Single unique ref, no duplicates.' }, tool_result: { status: 'committed' }, created_at: new Date().toISOString() },
+      ] : [
+        { turn: 1, tool_name: 'find_exact_candidates', tool_input: { reference: 'BARB000000001060', amount: 85200 }, tool_result: { candidates: [] }, created_at: new Date().toISOString() },
+        { turn: 2, tool_name: 'find_fuzzy_candidates', tool_input: { amount: 85200, date: '2026-08-15', customer_name: 'Rajesh Kumar Enterprises' }, tool_result: { candidates: [{ txn_id: 'TXN-00060', amount: 85200, payer_name: 'R. K. Enterprises' }, { txn_id: 'TXN-00072', amount: 85100, payer_name: 'Rajesh Kumar' }] }, created_at: new Date().toISOString() },
+        { turn: 3, tool_name: 'compare_names', tool_input: { name_a: 'Rajesh Kumar Enterprises', name_b: 'R. K. Enterprises' }, tool_result: { similarity: 0.78, name_a: 'Rajesh Kumar Enterprises', name_b: 'R. K. Enterprises' }, created_at: new Date().toISOString() },
+        { turn: 4, tool_name: 'check_duplicate_ref', tool_input: { reference: 'BARB000000001060' }, tool_result: { is_duplicate: false, count: 1 }, created_at: new Date().toISOString() },
+        { turn: 5, tool_name: 'commit_match', tool_input: { bank_txn_id: 'TXN-00060', confidence: 0.89, method: 'reasoned', reasoning: 'Name similarity 0.78 for "R. K. Enterprises" — plausible abbreviation. Amount exact. No duplicate refs.' }, tool_result: { status: 'committed' }, created_at: new Date().toISOString() },
+      ];
+      setLogs(demoLogs);
+      setLoaded(true);
+      return;
+    }
+    fetchAuditLog(ledgerId).then(data => { setLogs(data); setLoaded(true); });
+  }, [ledgerId]);
 
   const toggleStep = (index: number) => {
     setExpandedSteps(prev => {
@@ -394,8 +464,10 @@ const TraceModal = ({ ledgerId, onClose }: { ledgerId: number; onClose: () => vo
         </div>
         
         <div className="flex-1 overflow-y-auto p-8">
-          {logs.length === 0 ? (
+          {!loaded ? (
             <div className="text-center text-text-muted py-8">Loading trace...</div>
+          ) : logs.length === 0 ? (
+            <div className="text-center text-text-muted py-8">No trace data available.</div>
           ) : (
             <div className="space-y-0">
               {logs.map((log, i) => {
