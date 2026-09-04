@@ -113,7 +113,12 @@ const Dashboard = () => {
         <div className="flex-1 p-6 flex flex-col justify-center">
           <span className="text-xs font-sans text-text-muted mb-1">Precision</span>
           <span className="text-3xl font-mono font-bold text-text">{metrics?.precision !== undefined ? ((metrics.precision * 100).toFixed(1) + '%') : '0%'}</span>
-          <span className="text-[11px] font-sans text-text-muted mt-2">Accuracy of automated matches</span>
+          <span className="text-[11px] font-sans text-text-muted mt-2">Correct matches / all matches</span>
+        </div>
+        <div className="flex-1 p-6 flex flex-col justify-center">
+          <span className="text-xs font-sans text-text-muted mb-1">Recall</span>
+          <span className="text-3xl font-mono font-bold text-text">{metrics?.recall !== undefined ? ((metrics.recall * 100).toFixed(1) + '%') : '0%'}</span>
+          <span className="text-[11px] font-sans text-text-muted mt-2">Found matches / expected matches</span>
         </div>
       </div>
 
