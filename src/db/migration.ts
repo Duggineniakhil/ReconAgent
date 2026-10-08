@@ -2,7 +2,7 @@ import { query } from '../db';
 
 /**
  * Full schema migration for ReconAgent.
- * Creates all five tables in dependency order.
+ * Creates all tables in dependency order.
  * Uses IF NOT EXISTS so this is safe to run repeatedly.
  */
 export async function runMigration(): Promise<void> {
@@ -109,5 +109,53 @@ export async function runMigration(): Promise<void> {
   await query(`ALTER TABLE matches ADD CONSTRAINT matches_method_check CHECK (method IN ('exact','fuzzy','reasoned','manual'))`);
   console.log('[Migration] ✔ constraints');
 
-  console.log('[Migration] Schema migration complete — all 5 tables ready.');
+  // ── datasets ────────────────────────────────────────────────────────
+  // One row per load. The latest row describes the data currently in
+  // ledger_records / bank_transactions; only 'demo' data has ground truth.
+  await query(`
+    CREATE TABLE IF NOT EXISTS datasets (
+      id           SERIAL    PRIMARY KEY,
+      name         TEXT      NOT NULL,
+      source       TEXT      NOT NULL CHECK (source IN ('demo','upload')),
+      ledger_count INT       NOT NULL,
+      bank_count   INT       NOT NULL,
+      created_at   TIMESTAMP DEFAULT now()
+    );
+  `);
+  console.log('[Migration] ✔ datasets');
+
+  // ── runs ────────────────────────────────────────────────────────────
+  // A batch reconciliation job. Kept across dataset reloads so runs with
+  // different models / prompt versions can be compared.
+  await query(`
+    CREATE TABLE IF NOT EXISTS runs (
+      id             SERIAL    PRIMARY KEY,
+      dataset_id     INT       REFERENCES datasets(id) ON DELETE SET NULL,
+      status         TEXT      NOT NULL DEFAULT 'running'
+                               CHECK (status IN ('running','completed','failed','cancelled','interrupted')),
+      model          TEXT      NOT NULL,
+      prompt_version TEXT      NOT NULL,
+      concurrency    INT       NOT NULL,
+      total          INT       NOT NULL,
+      processed      INT       NOT NULL DEFAULT 0,
+      matched        INT       NOT NULL DEFAULT 0,
+      exceptions     INT       NOT NULL DEFAULT 0,
+      errors         INT       NOT NULL DEFAULT 0,
+      precheck_hits  INT       NOT NULL DEFAULT 0,
+      llm_calls      INT       NOT NULL DEFAULT 0,
+      input_tokens   INT       NOT NULL DEFAULT 0,
+      output_tokens  INT       NOT NULL DEFAULT 0,
+      failures       JSONB     NOT NULL DEFAULT '[]',
+      metrics        JSONB,
+      error          TEXT,
+      started_at     TIMESTAMP DEFAULT now(),
+      finished_at    TIMESTAMP
+    );
+  `);
+  await query(`ALTER TABLE matches    ADD COLUMN IF NOT EXISTS run_id INT REFERENCES runs(id) ON DELETE SET NULL`);
+  await query(`ALTER TABLE exceptions ADD COLUMN IF NOT EXISTS run_id INT REFERENCES runs(id) ON DELETE SET NULL`);
+  await query(`ALTER TABLE audit_log  ADD COLUMN IF NOT EXISTS run_id INT REFERENCES runs(id) ON DELETE SET NULL`);
+  console.log('[Migration] ✔ runs');
+
+  console.log('[Migration] Schema migration complete — all 7 tables ready.');
 }

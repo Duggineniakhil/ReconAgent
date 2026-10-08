@@ -1,95 +1,225 @@
 import { Router, Request, Response } from 'express';
-import fs from 'fs';
-import path from 'path';
-import config from '../config';
-import { ingestData } from '../services/ingest';
 import { query, withTransaction } from '../db';
-import { reconcileRecord } from '../agent';
-import { evaluate, type GroundTruthEntry } from '../services/metrics';
+import { ingestData, importUpload, currentDataset } from '../services/ingest';
+import { parseCsvRows, suggestMapping, LEDGER_FIELDS, BANK_FIELDS, type FieldDef } from '../services/csv_import';
+import { runManager, evaluateDecisions, BusyError, type RunRow } from '../services/runner';
 
 export const apiRouter = Router();
 
-// Ingest and reconcile both rewrite outcome tables; letting two of them overlap
-// is how records used to end up matched twice. Only one may run at a time.
-let busy: 'ingest' | 'reconcile' | null = null;
+// ═══════════════════════════════════════════════════════════════════════
+//  DATASETS
+// ═══════════════════════════════════════════════════════════════════════
+
+/**
+ * GET /api/dataset
+ * The dataset currently loaded (null if none has been recorded yet).
+ */
+apiRouter.get('/dataset', async (_req: Request, res: Response) => {
+  try {
+    res.json(await currentDataset());
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 /**
  * POST /api/ingest
- * Triggers the ingestData() utility.
+ * Loads the synthetic demo dataset from the data folder, replacing current data.
  */
-apiRouter.post('/ingest', async (req: Request, res: Response) => {
-  if (busy) {
-    res.status(409).json({ error: `A ${busy} run is already in progress` });
-    return;
-  }
-  busy = 'ingest';
+apiRouter.post('/ingest', async (_req: Request, res: Response) => {
   try {
-    const counts = await ingestData();
-    res.json({ success: true, counts });
+    const result = await runManager.withLock('ingest', () => ingestData());
+    res.json({
+      success: true,
+      counts: { ledgerCount: result.ledgerCount, bankCount: result.bankCount },
+      dataset: result.dataset,
+    });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  } finally {
-    busy = null;
+    res.status(err instanceof BusyError ? 409 : 500).json({ error: err.message });
   }
 });
 
 /**
- * POST /api/reconcile
- * Triggers the agent loop for all unreconciled records, updating progress.
+ * POST /api/datasets/preview
+ * Body: { ledgerCsv, bankCsv }. Returns each file's headers, a few sample rows,
+ * the fields we need and a suggested column mapping.
  */
-apiRouter.post('/reconcile', async (req: Request, res: Response) => {
-  if (busy) {
-    res.status(409).json({ error: `A ${busy} run is already in progress` });
+apiRouter.post('/datasets/preview', (req: Request, res: Response) => {
+  const { ledgerCsv, bankCsv } = req.body ?? {};
+  if (typeof ledgerCsv !== 'string' || typeof bankCsv !== 'string') {
+    res.status(400).json({ error: 'ledgerCsv and bankCsv must be CSV text' });
     return;
   }
-  busy = 'reconcile';
+
+  const describe = (csv: string, fields: FieldDef[]) => {
+    const [header = [], ...rows] = parseCsvRows(csv);
+    const headers = header.map((h) => h.trim());
+    return {
+      headers,
+      rowCount: rows.length,
+      sample: rows.slice(0, 5).map((r) => Object.fromEntries(headers.map((h, i) => [h, r[i] ?? '']))),
+      fields: fields.map(({ key, label, type, required }) => ({ key, label, type, required })),
+      suggested: suggestMapping(headers, fields),
+    };
+  };
+
+  res.json({ ledger: describe(ledgerCsv, LEDGER_FIELDS), bank: describe(bankCsv, BANK_FIELDS) });
+});
+
+/**
+ * POST /api/datasets/upload
+ * Body: { name?, dateFormat?, ledger: { csv, mapping }, bank: { csv, mapping } }.
+ * Validates every row; loads nothing and returns 422 with row-level errors if any are invalid.
+ */
+apiRouter.post('/datasets/upload', async (req: Request, res: Response) => {
+  const body = req.body ?? {};
+  if (typeof body.ledger?.csv !== 'string' || typeof body.bank?.csv !== 'string'
+      || typeof body.ledger?.mapping !== 'object' || typeof body.bank?.mapping !== 'object') {
+    res.status(400).json({ error: 'ledger and bank must each have csv text and a mapping' });
+    return;
+  }
+  if (body.dateFormat && !['auto', 'YMD', 'DMY', 'MDY'].includes(body.dateFormat)) {
+    res.status(400).json({ error: 'dateFormat must be auto, YMD, DMY or MDY' });
+    return;
+  }
+
   try {
-    const unreconciled = await query<{ id: number }>(`
-      SELECT l.id
-      FROM ledger_records l
-      LEFT JOIN matches m ON l.id = m.ledger_id
-      LEFT JOIN exceptions e ON l.id = e.ledger_id
-      WHERE m.id IS NULL AND e.id IS NULL
-      ORDER BY l.id ASC
-    `);
-
-    // Let the caller pass a limit to avoid rate limit issues in demo
-    const limit = Number(req.query.limit) || unreconciled.rows.length;
-    let processed = 0;
-    const errors: any[] = [];
-
-    // Process sequentially
-    for (const row of unreconciled.rows.slice(0, limit)) {
-      try {
-        await reconcileRecord(row.id);
-        processed++;
-      } catch (err: any) {
-        errors.push({ ledgerId: row.id, error: err.message });
-        if (err.message.includes('429')) {
-          // Break early on rate limits
-          break;
-        }
-      }
-    }
-
-    res.json({ success: true, processed, errors });
+    const result = await runManager.withLock('ingest', () => importUpload(body));
+    if (result.ok) res.json({ success: true, dataset: result.dataset });
+    else res.status(422).json({ error: 'Some rows are invalid', files: result.errors });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  } finally {
-    busy = null;
+    res.status(err instanceof BusyError ? 409 : 500).json({ error: err.message });
   }
 });
+
+// ═══════════════════════════════════════════════════════════════════════
+//  RUNS
+// ═══════════════════════════════════════════════════════════════════════
+
+/**
+ * GET /api/runs
+ * The 50 most recent runs, newest first.
+ */
+apiRouter.get('/runs', async (_req: Request, res: Response) => {
+  try {
+    const runs = await query(`
+      SELECT r.*, d.name AS dataset_name, d.source AS dataset_source
+      FROM runs r LEFT JOIN datasets d ON d.id = r.dataset_id
+      ORDER BY r.id DESC LIMIT 50
+    `);
+    res.json(runs.rows);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * POST /api/runs
+ * Body: { limit?, concurrency? }. Starts a background run over pending records
+ * and returns it immediately (202). 409 if a run or data load is in progress.
+ */
+apiRouter.post('/runs', async (req: Request, res: Response) => {
+  const limit = req.body?.limit == null ? undefined : Number(req.body.limit);
+  const concurrency = req.body?.concurrency == null ? undefined : Number(req.body.concurrency);
+  if ((limit !== undefined && !(limit > 0)) || (concurrency !== undefined && !(concurrency > 0))) {
+    res.status(400).json({ error: 'limit and concurrency must be positive numbers' });
+    return;
+  }
+  try {
+    const run = await runManager.start({ limit, concurrency });
+    res.status(202).json(run);
+  } catch (err: any) {
+    res.status(err instanceof BusyError ? 409 : 500).json({ error: err.message });
+  }
+});
+
+async function getRun(id: number): Promise<RunRow | undefined> {
+  if (!Number.isInteger(id)) return undefined;
+  const result = await query<RunRow>(`SELECT * FROM runs WHERE id = $1`, [id]);
+  return result.rows[0];
+}
+
+/**
+ * GET /api/runs/:id
+ */
+apiRouter.get('/runs/:id', async (req: Request, res: Response) => {
+  try {
+    const run = await getRun(Number(req.params.id));
+    if (!run) res.status(404).json({ error: 'Run not found' });
+    else res.json(run);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * GET /api/runs/:id/events
+ * Server-Sent Events: the run row on connect and after every processed
+ * record. The stream ends once the run has finished.
+ */
+apiRouter.get('/runs/:id/events', async (req: Request, res: Response) => {
+  const runId = Number(req.params.id);
+  let run: RunRow | undefined;
+  try {
+    run = await getRun(runId);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+    return;
+  }
+  if (!run) {
+    res.status(404).json({ error: 'Run not found' });
+    return;
+  }
+
+  res.set({ 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' });
+  res.flushHeaders();
+  const send = (row: RunRow) => res.write(`data: ${JSON.stringify(row)}\n\n`);
+  send(run);
+
+  if (run.status !== 'running') {
+    res.end();
+    return;
+  }
+
+  const heartbeat = setInterval(() => res.write(': ping\n\n'), 15_000);
+  const cleanup = () => {
+    clearInterval(heartbeat);
+    runManager.off('update', onUpdate);
+    res.end();
+  };
+  const onUpdate = (row: RunRow) => {
+    if (row.id !== runId) return;
+    send(row);
+    if (row.status !== 'running') cleanup();
+  };
+  runManager.on('update', onUpdate);
+  req.on('close', cleanup);
+});
+
+/**
+ * POST /api/runs/:id/cancel
+ * Stops the run after the records currently being processed.
+ */
+apiRouter.post('/runs/:id/cancel', (req: Request, res: Response) => {
+  if (runManager.cancel(Number(req.params.id))) res.json({ success: true });
+  else res.status(409).json({ error: 'That run is not active' });
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+//  RESULTS
+// ═══════════════════════════════════════════════════════════════════════
 
 /**
  * GET /api/matches
  * Fetches successfully matched records, joining with ledger and bank data.
  */
-apiRouter.get('/matches', async (req: Request, res: Response) => {
+apiRouter.get('/matches', async (_req: Request, res: Response) => {
   try {
     const matches = await query(`
-      SELECT 
+      SELECT
         m.id as match_id,
         m.ledger_id,
+        m.run_id,
         m.method,
         m.confidence,
         m.reasoning,
@@ -114,12 +244,13 @@ apiRouter.get('/matches', async (req: Request, res: Response) => {
  * GET /api/exceptions
  * Fetches records flagged for review.
  */
-apiRouter.get('/exceptions', async (req: Request, res: Response) => {
+apiRouter.get('/exceptions', async (_req: Request, res: Response) => {
   try {
     const exceptions = await query(`
-      SELECT 
+      SELECT
         e.id as exception_id,
         e.ledger_id,
+        e.run_id,
         e.reason,
         e.reasoning,
         e.status,
@@ -210,7 +341,7 @@ apiRouter.get('/audit-log/:ledgerId', async (req: Request, res: Response) => {
       SELECT turn_number as turn, tool_name, tool_input, tool_result, created_at
       FROM audit_log
       WHERE ledger_id = $1
-      ORDER BY turn_number ASC, created_at ASC
+      ORDER BY id ASC
     `, [ledgerId]);
     res.json(logs.rows);
   } catch (err: any) {
@@ -221,9 +352,9 @@ apiRouter.get('/audit-log/:ledgerId', async (req: Request, res: Response) => {
 /**
  * GET /api/metrics
  * Record counts, plus precision / recall / accuracy of the agent's own
- * decisions against data/ground_truth.json when it exists.
+ * decisions against data/ground_truth.json when the demo dataset is loaded.
  */
-apiRouter.get('/metrics', async (req: Request, res: Response) => {
+apiRouter.get('/metrics', async (_req: Request, res: Response) => {
   try {
     const stats = await query(`
       SELECT
@@ -233,34 +364,8 @@ apiRouter.get('/metrics', async (req: Request, res: Response) => {
         (SELECT COUNT(*) FROM exceptions WHERE status = 'open') as open_exceptions,
         (SELECT COUNT(*) FROM exceptions WHERE status = 'rejected') as rejected_exceptions
     `);
-
-    const gtPath = path.join(config.dataDir, 'ground_truth.json');
-    if (!fs.existsSync(gtPath)) {
-      res.json(stats.rows[0]);
-      return;
-    }
-    const groundTruth: GroundTruthEntry[] = JSON.parse(fs.readFileSync(gtPath, 'utf-8'));
-
-    // The agent's decision per invoice: its match (manual matches excluded,
-    // those are human decisions) or null where it flagged an exception.
-    const decisions = await query<{ invoice_id: string; bank_txn_id: string | null }>(`
-      SELECT l.invoice_id, b.txn_id AS bank_txn_id
-      FROM matches m
-      JOIN ledger_records l ON m.ledger_id = l.id
-      JOIN bank_transactions b ON m.bank_txn_id = b.id
-      WHERE m.method <> 'manual'
-      UNION ALL
-      SELECT l.invoice_id, NULL
-      FROM exceptions e
-      JOIN ledger_records l ON e.ledger_id = l.id
-    `);
-
-    const evaluation = evaluate(
-      groundTruth,
-      new Map(decisions.rows.map((r) => [r.invoice_id, r.bank_txn_id])),
-    );
-
-    res.json({ ...stats.rows[0], ...evaluation });
+    const evaluation = await evaluateDecisions();
+    res.json({ ...stats.rows[0], ...(evaluation ?? {}), has_ground_truth: evaluation !== null });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

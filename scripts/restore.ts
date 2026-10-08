@@ -66,6 +66,12 @@ async function run() {
       );
     }
 
+    // The backup holds the synthetic demo data, so it is scored against ground truth
+    await client.query(
+      `INSERT INTO datasets (name, source, ledger_count, bank_count) VALUES ($1, 'demo', $2, $3)`,
+      ['Demo dataset (restored backup)', data.ledger_records.length, data.bank_transactions.length],
+    );
+
     // Move sequences past the restored ids
     for (const table of ['ledger_records', 'bank_transactions', 'matches', 'exceptions', 'audit_log']) {
       await client.query(

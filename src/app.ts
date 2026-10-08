@@ -7,10 +7,12 @@ const app = express();
 
 import cors from 'cors';
 import { apiRouter } from './routes/api';
+import { runManager } from './services/runner';
 
 // ── Middleware ─────────────────────────────────────────────────────────
 app.use(cors());
-app.use(express.json());
+// CSV uploads are sent as JSON text
+app.use(express.json({ limit: '25mb' }));
 
 // ── Health check ──────────────────────────────────────────────────────
 app.get('/health', (_req: Request, res: Response) => {
@@ -31,6 +33,10 @@ async function start(): Promise<void> {
 
   // Run schema migration
   await runMigration();
+
+  // Runs that were in progress when the server last stopped can't resume
+  await runManager.recoverInterrupted();
+  runManager.setMaxListeners(100); // one listener per open progress stream
 
   // Start listening
   app.listen(config.server.port, () => {

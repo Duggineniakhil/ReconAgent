@@ -12,13 +12,7 @@
  *     server-side guardrails and written atomically
  */
 
-import {
-  GoogleGenerativeAI,
-  type GenerativeModel,
-  type Content,
-  type FunctionCall,
-  type Part,
-} from '@google/generative-ai';
+import type { Content, FunctionCall, Part } from '@google/generative-ai';
 import type { PoolClient } from 'pg';
 import { query, withTransaction } from '../db';
 import {
@@ -27,8 +21,7 @@ import {
   compareNames,
   checkDuplicateRef,
 } from '../tools';
-import { SYSTEM_PROMPT } from './system_prompt';
-import { FUNCTION_DECLARATIONS } from './tool_schemas';
+import { generate } from './gemini';
 import { checkCommit, type CommitTarget, type ExceptionReason } from './guardrails';
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -55,6 +48,21 @@ export interface ReconciliationResult {
   trace: ToolCallTrace[];
   turns: number;
   precheck: boolean;
+  usage: TokenUsage;
+}
+
+export interface TokenUsage {
+  llm_calls: number;
+  input_tokens: number;
+  output_tokens: number;
+}
+
+/** Per-record state threaded through the handlers. */
+interface Ctx {
+  ledger: LedgerRow;
+  runId: number | null;
+  trace: ToolCallTrace[];
+  usage: TokenUsage;
 }
 
 interface LedgerRow {
@@ -74,43 +82,23 @@ interface LedgerRow {
 const MAX_TOOL_CALLS = 6;
 /** Model round-trips allowed; leaves room to reach a terminal call after the budget runs out. */
 const MAX_MODEL_TURNS = MAX_TOOL_CALLS + 2;
-const MODEL_NAME = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
-
-// ═══════════════════════════════════════════════════════════════════════
-//  GEMINI CLIENT  (lazy singleton)
-// ═══════════════════════════════════════════════════════════════════════
-
-let _model: GenerativeModel | null = null;
-
-function getModel(): GenerativeModel {
-  if (!_model) {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) throw new Error('GEMINI_API_KEY not set');
-    const genAI = new GoogleGenerativeAI(apiKey);
-    _model = genAI.getGenerativeModel({
-      model: MODEL_NAME,
-      systemInstruction: SYSTEM_PROMPT,
-      tools: [{ functionDeclarations: FUNCTION_DECLARATIONS }],
-    });
-  }
-  return _model;
-}
 
 // ═══════════════════════════════════════════════════════════════════════
 //  AUDIT LOG
 // ═══════════════════════════════════════════════════════════════════════
 
 async function writeAuditLog(
-  ledgerId: number,
+  ctx: Ctx,
   turnNumber: number,
   toolName: string,
   toolInput: Record<string, unknown>,
   toolResult: unknown,
   client?: PoolClient,
 ): Promise<void> {
-  const sql = `INSERT INTO audit_log (ledger_id, turn_number, tool_name, tool_input, tool_result)
-               VALUES ($1, $2, $3, $4, $5)`;
-  const params = [ledgerId, turnNumber, toolName, JSON.stringify(toolInput), JSON.stringify(toolResult)];
+  const sql = `INSERT INTO audit_log (ledger_id, turn_number, tool_name, tool_input, tool_result, run_id)
+               VALUES ($1, $2, $3, $4, $5, $6)`;
+  const params = [ctx.ledger.id, turnNumber, toolName, JSON.stringify(toolInput), JSON.stringify(toolResult), ctx.runId];
+  ctx.trace.push({ turn: turnNumber, tool_name: toolName, tool_input: toolInput, tool_result: toolResult });
   if (client) await client.query(sql, params);
   else await query(sql, params);
 }
@@ -154,7 +142,6 @@ async function executeTool(
       return { error: `Unknown tool: ${toolName}` };
   }
 }
-
 // ═══════════════════════════════════════════════════════════════════════
 //  TERMINAL HANDLERS  (each runs in a single transaction)
 // ═══════════════════════════════════════════════════════════════════════
@@ -177,7 +164,7 @@ async function loadCommitTarget(
 
 async function insertException(
   client: PoolClient,
-  ledgerId: number,
+  ctx: Ctx,
   reason: ExceptionReason,
   reasoning: string,
   bestCandidateTxnId: string | null,
@@ -191,39 +178,47 @@ async function insertException(
     bestCandidateId = bank.rows[0]?.id ?? null;
   }
   await client.query(
-    `INSERT INTO exceptions (ledger_id, reason, best_candidate_bank_txn_id, reasoning)
-     VALUES ($1, $2, $3, $4)`,
-    [ledgerId, reason, bestCandidateId, reasoning],
+    `INSERT INTO exceptions (ledger_id, reason, best_candidate_bank_txn_id, reasoning, run_id)
+     VALUES ($1, $2, $3, $4, $5)`,
+    [ctx.ledger.id, reason, bestCandidateId, reasoning, ctx.runId],
   );
+}
+
+function baseResult(ctx: Ctx, turns: number) {
+  return {
+    ledger_id: ctx.ledger.id,
+    invoice_id: ctx.ledger.invoice_id,
+    trace: ctx.trace,
+    turns,
+    precheck: false,
+    usage: ctx.usage,
+  };
 }
 
 /** commit_match: re-check against the DB, then write a match or (if a guardrail trips) an exception. */
 async function handleCommitMatch(
-  ledger: LedgerRow,
+  ctx: Ctx,
   turn: number,
   input: Record<string, unknown>,
-  trace: ToolCallTrace[],
 ): Promise<ReconciliationResult> {
   const txnId = String(input.bank_txn_id ?? '');
   const confidence = Number(input.confidence) || 0;
-  const base = { ledger_id: ledger.id, invoice_id: ledger.invoice_id, trace, turns: turn, precheck: false };
 
   return withTransaction(async (client) => {
     const target = await loadCommitTarget(client, txnId);
-    const check = checkCommit(ledger.amount, confidence, target, txnId);
+    const check = checkCommit(ctx.ledger.amount, confidence, target, txnId);
 
-    const result = { status: check.ok ? 'committed' : 'rejected_by_guardrail' };
-    await writeAuditLog(ledger.id, turn, 'commit_match', input, result, client);
-    trace.push({ turn, tool_name: 'commit_match', tool_input: input, tool_result: result });
+    await writeAuditLog(ctx, turn, 'commit_match', input,
+      { status: check.ok ? 'committed' : 'rejected_by_guardrail' }, client);
 
     if (check.ok) {
       await client.query(
-        `INSERT INTO matches (ledger_id, bank_txn_id, method, confidence, reasoning)
-         VALUES ($1, $2, $3, $4, $5)`,
-        [ledger.id, target!.id, input.method, confidence, input.reasoning],
+        `INSERT INTO matches (ledger_id, bank_txn_id, method, confidence, reasoning, run_id)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [ctx.ledger.id, target!.id, input.method, confidence, input.reasoning, ctx.runId],
       );
       return {
-        ...base,
+        ...baseResult(ctx, turn),
         outcome: 'matched' as const,
         method: input.method as string,
         confidence,
@@ -233,13 +228,12 @@ async function handleCommitMatch(
     }
 
     const reasoning = `Guardrail blocked the agent's match to ${txnId}: ${check.message} Agent reasoning: ${input.reasoning}`;
-    const overrideInput = { bank_txn_id: txnId, reason: check.reason, message: check.message };
-    await writeAuditLog(ledger.id, turn, 'guardrail_override', overrideInput, { flagged: true }, client);
-    trace.push({ turn, tool_name: 'guardrail_override', tool_input: overrideInput, tool_result: { flagged: true } });
-    await insertException(client, ledger.id, check.reason, reasoning, target ? txnId : null);
+    await writeAuditLog(ctx, turn, 'guardrail_override',
+      { bank_txn_id: txnId, reason: check.reason, message: check.message }, { flagged: true }, client);
+    await insertException(client, ctx, check.reason, reasoning, target ? txnId : null);
 
     return {
-      ...base,
+      ...baseResult(ctx, turn),
       outcome: 'exception' as const,
       exception_reason: check.reason,
       reasoning,
@@ -250,11 +244,10 @@ async function handleCommitMatch(
 
 /** Write an exception (from flag_exception, a text-only reply, or the hard stop). */
 async function handleException(
-  ledger: LedgerRow,
+  ctx: Ctx,
   turn: number,
   toolName: string,
   input: Record<string, unknown>,
-  trace: ToolCallTrace[],
   outcome: 'exception' | 'timeout' = 'exception',
 ): Promise<ReconciliationResult> {
   const reason = input.reason as ExceptionReason;
@@ -263,22 +256,16 @@ async function handleException(
   const bestCandidate = candidate && candidate !== 'null' ? candidate : null;
 
   await withTransaction(async (client) => {
-    const result = { status: 'flagged' };
-    await writeAuditLog(ledger.id, turn, toolName, input, result, client);
-    trace.push({ turn, tool_name: toolName, tool_input: input, tool_result: result });
-    await insertException(client, ledger.id, reason, reasoning, bestCandidate);
+    await writeAuditLog(ctx, turn, toolName, input, { status: 'flagged' }, client);
+    await insertException(client, ctx, reason, reasoning, bestCandidate);
   });
 
   return {
-    ledger_id: ledger.id,
-    invoice_id: ledger.invoice_id,
+    ...baseResult(ctx, turn),
     outcome,
     exception_reason: reason,
     reasoning,
     best_candidate_id: bestCandidate,
-    trace,
-    turns: turn,
-    precheck: false,
   };
 }
 
@@ -286,9 +273,9 @@ async function handleException(
 //  PRECHECK — skip LLM for trivial exact matches
 // ═══════════════════════════════════════════════════════════════════════
 
-async function tryPrecheck(
-  ledger: LedgerRow,
-): Promise<ReconciliationResult | null> {
+async function tryPrecheck(ctx: Ctx): Promise<ReconciliationResult | null> {
+  const { ledger } = ctx;
+
   // Find all bank txns with this reference that aren't already matched
   const refResult = await query<{ id: number; txn_id: string; amount: number; matched: boolean }>(
     `SELECT b.id, b.txn_id, b.amount::float AS amount,
@@ -309,33 +296,26 @@ async function tryPrecheck(
 
   // Clean trivial match — commit directly, no LLM needed
   const reasoning = `Precheck: exact match on reference ${ledger.payment_ref} and amount ${ledger.amount}. Single unique reference, no ambiguity.`;
-  const auditInput = { reference: ledger.payment_ref, amount: ledger.amount };
-  const auditResult = {
-    matched: true,
-    bank_txn_id: bankTxn.txn_id,
-    bank_db_id: bankTxn.id,
-    method: 'exact',
-  };
 
   await withTransaction(async (client) => {
     await client.query(
-      `INSERT INTO matches (ledger_id, bank_txn_id, method, confidence, reasoning)
-       VALUES ($1, $2, 'exact', 1.000, $3)`,
-      [ledger.id, bankTxn.id, reasoning],
+      `INSERT INTO matches (ledger_id, bank_txn_id, method, confidence, reasoning, run_id)
+       VALUES ($1, $2, 'exact', 1.000, $3, $4)`,
+      [ledger.id, bankTxn.id, reasoning, ctx.runId],
     );
-    await writeAuditLog(ledger.id, 0, 'precheck_exact', auditInput, auditResult, client);
+    await writeAuditLog(ctx, 0, 'precheck_exact',
+      { reference: ledger.payment_ref, amount: ledger.amount },
+      { matched: true, bank_txn_id: bankTxn.txn_id, bank_db_id: bankTxn.id, method: 'exact' },
+      client);
   });
 
   return {
-    ledger_id: ledger.id,
-    invoice_id: ledger.invoice_id,
+    ...baseResult(ctx, 0),
     outcome: 'matched',
     method: 'exact',
     confidence: 1.0,
     reasoning,
     matched_bank_txn_id: bankTxn.txn_id,
-    trace: [{ turn: 0, tool_name: 'precheck_exact', tool_input: auditInput, tool_result: auditResult }],
-    turns: 0,
     precheck: true,
   };
 }
@@ -358,6 +338,11 @@ function extractFunctionCalls(parts: Part[]): FunctionCall[] {
 //  MAIN AGENT LOOP
 // ═══════════════════════════════════════════════════════════════════════
 
+export interface ReconcileOptions {
+  /** Run this record belongs to; stamped on its outcome and audit rows. */
+  runId?: number | null;
+}
+
 /**
  * Reconcile a single ledger record.
  *
@@ -367,6 +352,7 @@ function extractFunctionCalls(parts: Part[]): FunctionCall[] {
  */
 export async function reconcileRecord(
   ledgerId: number,
+  options: ReconcileOptions = {},
 ): Promise<ReconciliationResult> {
   // ── Fetch ledger record ─────────────────────────────────────────────
   const ledgerResult = await query<LedgerRow & { reconciled: boolean }>(
@@ -384,14 +370,18 @@ export async function reconcileRecord(
   // Clear audit rows left behind by an interrupted earlier attempt
   await query(`DELETE FROM audit_log WHERE ledger_id = $1`, [ledgerId]);
 
+  const ctx: Ctx = {
+    ledger,
+    runId: options.runId ?? null,
+    trace: [],
+    usage: { llm_calls: 0, input_tokens: 0, output_tokens: 0 },
+  };
+
   // ── Precheck ────────────────────────────────────────────────────────
-  const precheckResult = await tryPrecheck(ledger);
+  const precheckResult = await tryPrecheck(ctx);
   if (precheckResult) return precheckResult;
 
   // ── Agent loop via Gemini ───────────────────────────────────────────
-  const model = getModel();
-  const trace: ToolCallTrace[] = [];
-
   const userMessage = [
     `Investigate this ledger record and determine whether it has a matching bank transaction.`,
     ``,
@@ -412,18 +402,20 @@ export async function reconcileRecord(
   while (turn < MAX_MODEL_TURNS) {
     turn++;
 
-    const response = await model.generateContent({ contents });
-    const parts = response.response.candidates?.[0]?.content?.parts ?? [];
-    contents.push({ role: 'model', parts });
+    const reply = await generate(contents);
+    ctx.usage.llm_calls++;
+    ctx.usage.input_tokens += reply.inputTokens;
+    ctx.usage.output_tokens += reply.outputTokens;
+    contents.push({ role: 'model', parts: reply.parts });
 
-    const functionCalls = extractFunctionCalls(parts);
+    const functionCalls = extractFunctionCalls(reply.parts);
 
     // If no function calls, the model gave a text response (shouldn't happen)
     if (functionCalls.length === 0) {
-      return handleException(ledger, turn, 'no_terminal_call', {
+      return handleException(ctx, turn, 'no_terminal_call', {
         reason: 'unexplained_discrepancy',
         reasoning: 'Agent responded with text only, no terminal tool called.',
-      }, trace);
+      });
     }
 
     const functionResponseParts: Part[] = [];
@@ -432,8 +424,8 @@ export async function reconcileRecord(
       const input = (fc.args ?? {}) as Record<string, unknown>;
 
       // Terminal tools end the investigation; any calls after them are ignored
-      if (fc.name === 'commit_match') return handleCommitMatch(ledger, turn, input, trace);
-      if (fc.name === 'flag_exception') return handleException(ledger, turn, 'flag_exception', input, trace);
+      if (fc.name === 'commit_match') return handleCommitMatch(ctx, turn, input);
+      if (fc.name === 'flag_exception') return handleException(ctx, turn, 'flag_exception', input);
 
       let result: Record<string, unknown>;
       if (toolCalls >= MAX_TOOL_CALLS) {
@@ -443,8 +435,7 @@ export async function reconcileRecord(
         result = await executeTool(fc.name, input);
       }
 
-      await writeAuditLog(ledger.id, turn, fc.name, input, result);
-      trace.push({ turn, tool_name: fc.name, tool_input: input, tool_result: result });
+      await writeAuditLog(ctx, turn, fc.name, input, result);
 
       functionResponseParts.push({
         functionResponse: { name: fc.name, response: result },
@@ -456,8 +447,8 @@ export async function reconcileRecord(
   }
 
   // ── Hard-stop: model never reached a terminal call ──────────────────
-  return handleException(ledger, turn, 'hard_stop', {
+  return handleException(ctx, turn, 'hard_stop', {
     reason: 'unexplained_discrepancy',
     reasoning: `Agent did not reach a decision within ${MAX_TOOL_CALLS} tool calls.`,
-  }, trace, 'timeout');
+  }, 'timeout');
 }
