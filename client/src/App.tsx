@@ -1,63 +1,80 @@
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, AlertCircle, CheckCircle2, Play, Database, FileSearch, X } from 'lucide-react';
-import { fetchMetrics, triggerIngest, triggerReconcile, fetchMatches, fetchExceptions, fetchAuditLog, resolveException } from './api';
-import type { Metrics, Match, Exception, AuditLog } from './api';
-import clsx from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-
-// Simple utility for Tailwind class merging
-export function cn(...inputs: (string | undefined | null | false)[]) {
- return twMerge(clsx(inputs));
-}
-
-const inr = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
+import { LayoutDashboard, AlertCircle, CheckCircle2, Play, Database, FileSearch, X, History, Upload } from 'lucide-react';
+import { fetchMetrics, triggerIngest, fetchMatches, fetchExceptions, fetchAuditLog, resolveException, fetchDataset, fetchRuns, startRun, apiError } from './api';
+import type { Metrics, Match, Exception, AuditLog, Dataset, Run } from './api';
+import { cn, inr, formatPercent, btnPrimary, btnSecondary } from './lib/format';
+import { RunProgress, RunsView } from './components/Runs';
+import { UploadModal } from './components/UploadModal';
 
 const Dashboard = () => {
- const [metrics, setMetrics] = useState<Metrics | null>(null);
- const [matches, setMatches] = useState<Match[]>([]);
- const [loading, setLoading] = useState(false);
- const [ingesting, setIngesting] = useState(false);
+  const [metrics, setMetrics] = useState<Metrics | null>(null);
+  const [matches, setMatches] = useState<Match[]>([]);
+  const [dataset, setDataset] = useState<Dataset | null>(null);
+  const [activeRun, setActiveRun] = useState<Run | null>(null);
+  const [runLimit, setRunLimit] = useState('');
+  const [starting, setStarting] = useState(false);
+  const [ingesting, setIngesting] = useState(false);
+  const [showUpload, setShowUpload] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
- const loadData = async () => {
- try {
- const [m, mats] = await Promise.all([fetchMetrics(), fetchMatches()]);
- setMetrics(m);
- setMatches(mats);
- } catch (err) {
- console.error(err);
- }
- };
+  const loadData = async () => {
+    try {
+      const [m, mats, ds] = await Promise.all([fetchMetrics(), fetchMatches(), fetchDataset()]);
+      setMetrics(m);
+      setMatches(mats);
+      setDataset(ds);
+    } catch (err) {
+      setError(apiError(err));
+    }
+  };
 
- useEffect(() => {
- loadData();
- }, []);
+  useEffect(() => {
+    loadData();
+    // Pick up a run that is already in progress (e.g. after a page refresh)
+    fetchRuns().then((runs) => setActiveRun(runs.find((r) => r.status === 'running') ?? null)).catch(() => {});
+  }, []);
 
- const handleIngest = async () => {
- setIngesting(true);
- await triggerIngest();
- await loadData();
- setIngesting(false);
- };
+  const handleIngest = async () => {
+    if (!window.confirm('Replace the current data (and its matches and exceptions) with the synthetic demo dataset?')) return;
+    setIngesting(true);
+    setError(null);
+    try {
+      await triggerIngest();
+      setActiveRun(null);
+      await loadData();
+    } catch (err) {
+      setError(apiError(err));
+    } finally {
+      setIngesting(false);
+    }
+  };
 
- const handleRunReconcile = async () => {
- setLoading(true);
- // Limit to 4 to avoid hitting the 15 RPM / 20 RPD Gemini free limits too quickly
- await triggerReconcile(4);
- await loadData();
- setLoading(false);
- };
+  const handleStartRun = async () => {
+    setStarting(true);
+    setError(null);
+    try {
+      const limit = runLimit ? Number(runLimit) : undefined;
+      setActiveRun(await startRun({ limit }));
+    } catch (err) {
+      setError(apiError(err));
+    } finally {
+      setStarting(false);
+    }
+  };
+
+  const running = activeRun?.status === 'running';
 
   const methodCounts = matches.reduce((acc, m) => {
     acc[m.method] = (acc[m.method] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
-  
+
   // Each processed record ends up either matched (any method) or with an unapproved exception
   const exceptionCount = Number(metrics?.open_exceptions || 0) + Number(metrics?.rejected_exceptions || 0);
   const totalProcessed = matches.length + exceptionCount;
+  const pendingCount = Math.max(0, Number(metrics?.total_records || 0) - totalProcessed);
   const getPercentage = (count: number) => totalProcessed === 0 ? 0 : (count / totalProcessed) * 100;
-  
+
   const exactCount = methodCounts['exact'] || 0;
   const fuzzyCount = methodCounts['fuzzy'] || 0;
   const reasonedCount = methodCounts['reasoned'] || 0;
@@ -65,44 +82,74 @@ const Dashboard = () => {
   const autoMatchedCount = exactCount + fuzzyCount + reasonedCount;
 
   const hasData = totalProcessed > 0;
+  const scored = metrics?.has_ground_truth;
 
   return (
     <div className="space-y-6">
-  <div className="flex justify-between items-center">
-    <div className="flex items-center gap-4">
-      <div className="flex items-center gap-2 text-text-muted">
-        <span className="font-serif text-lg">ReconAgent</span>
-        <span className="text-sm">/</span>
-        <span className="text-text font-semibold font-serif text-lg">Dashboard</span>
+      <div className="flex flex-wrap justify-between items-center gap-4">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 text-text-muted">
+            <span className="font-serif text-lg">ReconAgent</span>
+            <span className="text-sm">/</span>
+            <span className="text-text font-semibold font-serif text-lg">Dashboard</span>
+          </div>
+          <span className="px-2 py-0.5 text-xs font-mono text-text-muted bg-surface-raised border border-border rounded-full">
+            {dataset ? `${dataset.name} · ${dataset.source === 'demo' ? 'synthetic' : 'uploaded'}` : 'No dataset loaded'}
+          </span>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <button onClick={() => setShowUpload(true)} disabled={running || ingesting} className={btnSecondary}>
+            <Upload size={18} />
+            Upload CSVs
+          </button>
+          <button onClick={handleIngest} disabled={running || ingesting} className={btnSecondary}>
+            <Database size={18} />
+            {ingesting ? 'Loading…' : 'Load demo data'}
+          </button>
+          <div className="flex items-stretch">
+            <input
+              type="number"
+              min={1}
+              value={runLimit}
+              onChange={(e) => setRunLimit(e.target.value)}
+              placeholder={`All ${pendingCount}`}
+              title="Number of pending records to process (empty = all)"
+              aria-label="Records to process"
+              className="w-24 px-2 text-sm font-mono bg-surface border border-border border-r-0 rounded-l-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-matched"
+            />
+            <button
+              onClick={handleStartRun}
+              disabled={running || starting || ingesting || pendingCount === 0}
+              className={cn(btnPrimary, 'rounded-l-none')}
+            >
+              <Play size={18} className={running ? 'animate-pulse' : ''} />
+              {running ? 'Running…' : 'Start run'}
+            </button>
+          </div>
+        </div>
       </div>
-      <span className="px-2 py-0.5 text-xs font-mono text-text-muted bg-surface-raised border border-border rounded-full">
-        Demo dataset &middot; synthetic
-      </span>
-    </div>
-    <div className="flex gap-4">
-      <button
-        onClick={handleIngest}
-        disabled={ingesting || loading}
-        className="flex items-center gap-2 px-4 py-2 bg-transparent border border-border hover:bg-surface-raised text-text rounded-md transition-colors disabled:opacity-50 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-matched focus-visible:ring-offset-2 focus-visible:ring-offset-base"
-      >
-        <Database size={18} />
-        {ingesting ? 'Ingesting...' : 'Reset & Ingest Data'}
-      </button>
-      <button
-        onClick={handleRunReconcile}
-        disabled={loading || ingesting}
-        className="flex items-center gap-2 px-4 py-2 bg-accent-matched hover:brightness-110 text-surface rounded-md transition-all font-medium disabled:opacity-50 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-matched focus-visible:ring-offset-2 focus-visible:ring-offset-base"
-      >
-        <Play size={18} className={loading ? 'animate-pulse' : ''} />
-        {loading ? 'Reconciling...' : 'Run Agent (Next 4)'}
-      </button>
-    </div>
-  </div>
+
+      {error && (
+        <div className="p-3 text-sm border border-accent-error/30 bg-accent-error/5 text-accent-error rounded-md flex justify-between">
+          {error}
+          <button onClick={() => setError(null)} aria-label="Dismiss"><X size={16} /></button>
+        </div>
+      )}
+
+      {activeRun && <RunProgress key={activeRun.id} run={activeRun} onFinished={loadData} />}
+
+      {showUpload && (
+        <UploadModal
+          onClose={() => setShowUpload(false)}
+          onUploaded={() => { setShowUpload(false); setActiveRun(null); loadData(); }}
+        />
+      )}
 
       <div className="flex flex-col md:flex-row bg-surface/80 backdrop-blur-md border border-border/50 rounded-md divide-y md:divide-y-0 md:divide-x divide-border/50">
         <div className="flex-1 p-6 flex flex-col justify-center">
           <span className="text-xs font-sans text-text-muted mb-1">Total records</span>
           <span className="text-3xl font-mono font-bold text-text">{metrics?.total_records || '0'}</span>
+          <span className="text-[11px] font-sans text-text-muted mt-2">{pendingCount} not yet processed</span>
         </div>
         <div className="flex-1 p-6 flex flex-col justify-center">
           <span className="text-xs font-sans text-text-muted mb-1">Total matches</span>
@@ -116,13 +163,13 @@ const Dashboard = () => {
         </div>
         <div className="flex-1 p-6 flex flex-col justify-center">
           <span className="text-xs font-sans text-text-muted mb-1">Precision</span>
-          <span className="text-3xl font-mono font-bold text-text">{metrics?.precision !== undefined ? ((metrics.precision * 100).toFixed(1) + '%') : '0%'}</span>
-          <span className="text-[11px] font-sans text-text-muted mt-2">Correct matches / all matches</span>
+          <span className="text-3xl font-mono font-bold text-text">{scored ? formatPercent(metrics?.precision) : '—'}</span>
+          <span className="text-[11px] font-sans text-text-muted mt-2">{scored ? 'Correct matches / all matches' : 'Needs ground truth (demo data)'}</span>
         </div>
         <div className="flex-1 p-6 flex flex-col justify-center">
           <span className="text-xs font-sans text-text-muted mb-1">Recall</span>
-          <span className="text-3xl font-mono font-bold text-text">{metrics?.recall !== undefined ? ((metrics.recall * 100).toFixed(1) + '%') : '0%'}</span>
-          <span className="text-[11px] font-sans text-text-muted mt-2">Found matches / expected matches</span>
+          <span className="text-3xl font-mono font-bold text-text">{scored ? formatPercent(metrics?.recall) : '—'}</span>
+          <span className="text-[11px] font-sans text-text-muted mt-2">{scored ? 'Found matches / expected matches' : 'Needs ground truth (demo data)'}</span>
         </div>
       </div>
 
@@ -166,7 +213,7 @@ const Dashboard = () => {
           </div>
         ) : (
           <div className="w-full py-12 flex items-center justify-center">
-            <p className="text-text-muted text-sm font-sans">Ingest data, then run the agent to see how it matched each record.</p>
+            <p className="text-text-muted text-sm font-sans">Load demo data or upload your own CSVs, then start a run to see how the agent matched each record.</p>
           </div>
         )}
       </div>
@@ -484,11 +531,12 @@ const TraceModal = ({ ledgerId, onClose }: { ledgerId: number; onClose: () => vo
 };
 
 function App() {
- const [currentTab, setCurrentTab] = useState<'dashboard' | 'exceptions' | 'matches'>('dashboard');
+ const [currentTab, setCurrentTab] = useState<'dashboard' | 'runs' | 'exceptions' | 'matches'>('dashboard');
  const [traceId, setTraceId] = useState<number | null>(null);
 
  const tabs = [
  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+ { id: 'runs', label: 'Runs', icon: History },
  { id: 'exceptions', label: 'Exceptions', icon: AlertCircle },
  { id: 'matches', label: 'Matches', icon: CheckCircle2 },
  ] as const;
@@ -532,6 +580,7 @@ function App() {
   <div className="p-8 max-w-7xl mx-auto">
   <div key={currentTab} className="animate-in fade-in slide-in-from-bottom-4 duration-500">
   {currentTab === 'dashboard' && <Dashboard />}
+  {currentTab === 'runs' && <RunsView />}
   {currentTab === 'exceptions' && <ExceptionsQueue onTrace={setTraceId} />}
   {currentTab === 'matches' && <MatchesView onTrace={setTraceId} />}
   </div>
