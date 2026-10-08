@@ -110,9 +110,30 @@ The schema backs this up: each ledger record has at most one match and one excep
 **Start run** on the dashboard (or `POST /api/runs` with an optional `limit` and `concurrency`) creates a background run over all pending records and returns immediately. While it works:
 
 - **Live progress** streams to the dashboard over Server-Sent Events (`GET /api/runs/:id/events`): records processed, matched, exceptions, errors, precheck hits, LLM calls and tokens, plus an ETA. Runs can be stopped mid-way.
-- **Gemini calls are rate-limited** process-wide (`GEMINI_RPM`, default 15 for the free tier) and **retried with exponential backoff** on 429, 5xx and network errors. Other errors (e.g. a bad API key) fail the record without retrying, and a run stops itself after 5 consecutive failures.
+- **Gemini calls are rate-limited** process-wide (`GEMINI_RPM`, default 15 for the free tier) and **retried** on 429, 5xx and network errors, waiting as long as Gemini's `RetryInfo` asks (otherwise exponential backoff). An exhausted daily quota is not retried: the run stops immediately with a clear message. Other errors (e.g. a bad API key) fail the record, and a run stops itself after 5 consecutive failures.
 - **Every run is kept** with its model, a hash of the prompt and tool schemas (`prompt_version`), token usage and final metrics, so you can compare how prompt or model changes affect accuracy on the **Runs** tab. Matches, exceptions and trace steps are tagged with the run that produced them.
 - If the server stops mid-run, the run is marked `interrupted` on the next start, and its unprocessed records stay pending for the next run.
+
+## 💳 Razorpay Settlements
+
+Invoices paid online never show up on the bank statement one by one. Razorpay batches captured payments into a **settlement** and pays it out as one bank credit, **net of its fees (incl. 18% GST on the fee) and any refunds**. ReconAgent reconciles all three sides:
+
+```
+Invoice INV-2026-0071 ─┐                            ┌─ pay_…  ₹23,314.00 − fee ₹550.21
+Invoice INV-2026-0072 ─┼─ Razorpay payments ───────┼─ pay_…  ₹4,937.00  − fee ₹116.51   ─┐
+Invoice INV-2026-0073 ─┘   (order_receipt)          └─ …                                    │
+                                                                                            ▼
+                                       Settlement setl_… (UTR UTIBR5…) = Σ credit − Σ debit = ₹1,22,303.10
+                                                                                            │
+                                                     Bank credit TXN-00076 "RAZORPAY SOFTWARE" ₹1,22,303.10 ✓
+```
+
+- **Settlement ↔ bank:** at the start of every run, each settlement's lines are summed and matched to the bank credit carrying its UTR, to the paisa. If the UTR isn't on the statement, a unique credit of exactly the net amount within 3 days is accepted. The outcome is `matched`, `mismatch` (with the shortfall, e.g. a chargeback or hold missing from the report) or `missing` (the payout hasn't reached the bank). Each comes with a plain-language breakdown of gross − fees − GST − refunds.
+- **Invoice ↔ payment:** a payment whose `order_receipt` (or `notes.invoice`) is the invoice ID, for the exact amount, is matched in a precheck with no LLM call. For the rest, the agent uses `find_gateway_payments` (amount, date, notes) and `explain_bank_credit`. Guardrails only allow payments, never refunds, and never let an invoice claim a settlement payout. A database trigger enforces the latter too.
+- **Fees & GST:** the Settlements tab totals gateway fees, the GST on them (claimable as input tax credit) and the effective rate per payment method.
+- **Sync from Razorpay:** with `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` in `.env` (test-mode keys work), **Sync** pulls [`GET /v1/settlements/recon/combined`](https://razorpay.com/docs/api/settlements/fetch-recon/) for a date range (paginated, up to 62 days) into the current dataset. Lines are upserted, so a payment that settles later is updated. Settlements are reconciled on the next run. The recon report only lists settled transactions, so payments not yet settled appear once Razorpay pays them out.
+
+The demo dataset includes 15 Razorpay invoices across four settlements: a clean one, one with a refund, one short by ₹1,180, and one missing from the bank. It also has an unsettled payment, two payments with no receipt, and an invoice with no payment. The expected outcomes are in `data/settlement_truth.json` and `data/ground_truth.json`.
 
 ## 📤 Uploading Your Own Data
 
@@ -143,7 +164,9 @@ Dashboard: `http://localhost:5173` · API: `http://localhost:3000` · Postgres i
    GEMINI_API_KEY=your_gemini_api_key
    GEMINI_MODEL=gemini-3.8-flash
    ```
-   Optional: `GEMINI_RPM` (default 15) and `RUN_CONCURRENCY` (default 2).
+   Optional: `GEMINI_RPM` (default 15), `RUN_CONCURRENCY` (default 2), and `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` for settlement sync.
+
+   > **Gemini free tier:** besides the per-minute limit, the free tier allows only about **20 requests per day per model**. A run of the full demo needs more than that. When the daily quota runs out, the run stops straight away with the time it resets, and unprocessed records stay pending.
 2. **Backend** (runs on `http://localhost:3000`, migrations run on startup):
    ```bash
    npm install
@@ -178,7 +201,7 @@ Run the data generation script from the root directory:
 ```bash
 npm run generate-data
 ```
-This script uses a fixed random seed to generate ~70 ledger records and ~75 bank transactions, explicitly crafting edge cases like rounding differences, date drift, and name variants. The data is written to the `data/` folder as `ledger_records.csv`, `bank_transactions.csv`, and `ground_truth.json`.
+This script uses a fixed random seed to generate 85 ledger records and 78 bank transactions, explicitly crafting edge cases like rounding differences, date drift, name variants and the Razorpay settlement scenarios above. The data is written to the `data/` folder as `ledger_records.csv`, `bank_transactions.csv`, `ground_truth.json`, `razorpay_recon.json` and `settlement_truth.json`.
 
 You can then load this data from the dashboard with **"Load demo data"**, which replaces the current dataset.
 
