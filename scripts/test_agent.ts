@@ -111,7 +111,7 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  console.log(`  Model: ${process.env.GEMINI_MODEL || 'gemini-2.0-flash'}\n`);
+  console.log(`  Model: ${process.env.GEMINI_MODEL || 'gemini-3.8-flash'}\n`);
 
   // Connect + migrate + ingest
   const ok = await testConnection();

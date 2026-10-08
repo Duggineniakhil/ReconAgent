@@ -23,7 +23,7 @@ services:
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/reconagent
       GEMINI_API_KEY: ${GEMINI_API_KEY:?Set GEMINI_API_KEY in .env}
-      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.0-flash}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.8-flash}
     ports:
       - "3000:3000"
     depends_on:

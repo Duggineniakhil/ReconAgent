@@ -12,7 +12,7 @@ import {
 import { SYSTEM_PROMPT } from './system_prompt';
 import { FUNCTION_DECLARATIONS } from './tool_schemas';
 
-export const MODEL_NAME = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+export const MODEL_NAME = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
 
 /** Short hash of the system prompt + tool schemas, so runs can be grouped by prompt version. */
 export const PROMPT_VERSION = crypto
@@ -84,7 +84,8 @@ export async function generate(contents: Content[]): Promise<ModelReply> {
     } catch (err) {
       if (attempt >= MAX_RETRIES || !isRetryable(err)) throw err;
       const delay = Math.min(RETRY_BASE_MS * 2 ** attempt, RETRY_MAX_MS) * (0.75 + Math.random() * 0.5);
-      console.warn(`[Gemini] ${(err as Error).message.slice(0, 120)}; retry ${attempt + 1}/${MAX_RETRIES} in ${Math.round(delay)}ms`);
+      const status = (err as { status?: number }).status ?? 'network';
+      console.warn(`[Gemini] ${status} error; retry ${attempt + 1}/${MAX_RETRIES} in ${Math.round(delay)}ms`);
       await sleep(delay);
     }
   }
