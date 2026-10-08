@@ -13,7 +13,7 @@ import fs from 'fs';
 import path from 'path';
 import { query } from '../db';
 import config from '../config';
-import { reconcileRecord, MODEL_NAME, PROMPT_VERSION } from '../agent';
+import { reconcileRecord, MODEL_NAME, PROMPT_VERSION, QuotaExhaustedError } from '../agent';
 import { currentDataset } from './ingest';
 import { reconcileSettlements } from './settlements';
 import { evaluate, type GroundTruthEntry, type EvaluationResult } from './metrics';
@@ -201,7 +201,10 @@ class RunManager extends EventEmitter {
             processed = processed + 1, errors = errors + 1,
             failures = failures || jsonb_build_array(jsonb_build_object('ledger_id', $2::int, 'error', $3::text))`,
             [ledgerId, message.slice(0, 500)]);
-          if (++consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+          if (err instanceof QuotaExhaustedError) {
+            // Every remaining record would fail the same way
+            fatalError = message;
+          } else if (++consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
             fatalError = `Stopped after ${consecutiveFailures} consecutive failures. Last error: ${message.slice(0, 300)}`;
           }
         }

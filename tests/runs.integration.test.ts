@@ -145,6 +145,43 @@ describe.skipIf(!url)('runs and uploads (integration)', () => {
     expect(generateContent).toHaveBeenCalledTimes(5); // 400s are not retried
   });
 
+  it('stops at once when the daily quota is exhausted, without retrying', async () => {
+    // Shape of the error Gemini returns for the free tier's daily limit
+    behaviour = async () => {
+      throw Object.assign(new Error('[429 Too Many Requests] You exceeded your current quota'), {
+        status: 429,
+        errorDetails: [
+          { '@type': 'type.googleapis.com/google.rpc.QuotaFailure', violations: [{ quotaId: 'GenerateRequestsPerDayPerProjectPerModel-FreeTier' }] },
+          { '@type': 'type.googleapis.com/google.rpc.RetryInfo', retryDelay: '16594s' },
+        ],
+      });
+    };
+
+    const run = await runToCompletion({ concurrency: 1 });
+
+    expect(run.status).toBe('failed');
+    expect(run.errors).toBe(1);
+    expect(run.error).toMatch(/quota exhausted .*PerDay.*Try again in 4h 37m/);
+    expect(generateContent).toHaveBeenCalledTimes(1);
+  });
+
+  it('waits the delay Gemini asks for on a short rate limit, then succeeds', async () => {
+    let calls = 0;
+    behaviour = async () => {
+      if (calls++ === 0) {
+        throw Object.assign(new Error('[429 Too Many Requests]'), {
+          status: 429,
+          errorDetails: [{ '@type': 'type.googleapis.com/google.rpc.RetryInfo', retryDelay: '0.02s' }],
+        });
+      }
+      return flag;
+    };
+
+    const run = await runToCompletion({ concurrency: 1, limit: 2 });
+
+    expect(run).toMatchObject({ status: 'completed', errors: 0 });
+  });
+
   it('can be cancelled, and blocks other runs and data loads while active', async () => {
     let release!: () => void;
     const gate = new Promise<void>((resolve) => { release = resolve; });

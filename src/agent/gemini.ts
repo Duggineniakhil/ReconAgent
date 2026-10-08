@@ -55,6 +55,33 @@ async function waitForSlot(): Promise<void> {
   if (slot > now) await sleep(slot - now);
 }
 
+/**
+ * The model's quota is used up for longer than is worth waiting (e.g. the
+ * free tier's daily request limit). Retrying won't help; runs stop on this.
+ */
+export class QuotaExhaustedError extends Error {}
+
+type ErrorDetail = { '@type'?: string; retryDelay?: string; violations?: { quotaId?: string }[] };
+const details = (err: unknown): ErrorDetail[] => (err as { errorDetails?: ErrorDetail[] }).errorDetails ?? [];
+
+/** Delay Google asks for in a RetryInfo detail ("16594s"), in ms. */
+export function requestedRetryMs(err: unknown): number | null {
+  const info = details(err).find((d) => d['@type']?.endsWith('RetryInfo'));
+  const seconds = info?.retryDelay ? parseFloat(info.retryDelay) : NaN;
+  return Number.isFinite(seconds) ? seconds * 1000 : null;
+}
+
+/** The quota a 429 refers to, e.g. GenerateRequestsPerDayPerProjectPerModel-FreeTier. */
+function quotaId(err: unknown): string | null {
+  const failure = details(err).find((d) => d['@type']?.endsWith('QuotaFailure'));
+  return failure?.violations?.[0]?.quotaId ?? null;
+}
+
+function formatWait(ms: number): string {
+  const minutes = Math.round(ms / 60_000);
+  return minutes >= 60 ? `${Math.floor(minutes / 60)}h ${minutes % 60}m` : `${Math.max(1, minutes)}m`;
+}
+
 function isRetryable(err: unknown): boolean {
   const status = (err as { status?: number }).status;
   if (status === 429 || (status !== undefined && status >= 500)) return true;
@@ -82,10 +109,20 @@ export async function generate(contents: Content[]): Promise<ModelReply> {
         outputTokens: usage?.candidatesTokenCount ?? 0,
       };
     } catch (err) {
+      const status = (err as { status?: number }).status;
+      const requested = requestedRetryMs(err);
+      const quota = quotaId(err);
+
+      // A daily quota (or any wait longer than we'd sit through) won't clear by retrying
+      if (status === 429 && (quota?.includes('PerDay') || (requested !== null && requested > RETRY_MAX_MS))) {
+        const wait = requested !== null ? ` Try again in ${formatWait(requested)}.` : '';
+        throw new QuotaExhaustedError(`Gemini quota exhausted for ${MODEL_NAME}${quota ? ` (${quota})` : ''}.${wait}`);
+      }
       if (attempt >= MAX_RETRIES || !isRetryable(err)) throw err;
-      const delay = Math.min(RETRY_BASE_MS * 2 ** attempt, RETRY_MAX_MS) * (0.75 + Math.random() * 0.5);
-      const status = (err as { status?: number }).status ?? 'network';
-      console.warn(`[Gemini] ${status} error; retry ${attempt + 1}/${MAX_RETRIES} in ${Math.round(delay)}ms`);
+
+      // Honour the delay Google suggests; otherwise exponential backoff with jitter
+      const delay = requested ?? Math.min(RETRY_BASE_MS * 2 ** attempt, RETRY_MAX_MS) * (0.75 + Math.random() * 0.5);
+      console.warn(`[Gemini] ${status ?? 'network'} error; retry ${attempt + 1}/${MAX_RETRIES} in ${Math.round(delay)}ms`);
       await sleep(delay);
     }
   }
