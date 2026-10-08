@@ -73,6 +73,11 @@ describe('suggestMapping', () => {
     });
   });
 
+  it('ignores punctuation in headers', () => {
+    const mapping = suggestMapping(['Date', 'Narration', 'Chq./Ref.No.', 'Deposit Amt.'], BANK_FIELDS);
+    expect(mapping).toMatchObject({ utr_ref: 'Chq./Ref.No.', amount: 'Deposit Amt.' });
+  });
+
   it('maps our own column names exactly', () => {
     const headers = ['invoice_id', 'customer_name', 'amount', 'invoice_date', 'payment_ref'];
     const mapping = suggestMapping(headers, LEDGER_FIELDS);
@@ -103,6 +108,19 @@ describe('mapRows', () => {
     expect(errors.map((e) => [e.row, e.field])).toEqual([
       [3, 'customer_name'], [3, 'amount'], [3, 'invoice_date'],
     ]);
+  });
+
+  it('skips rows with an empty skipIfEmpty field and keeps original line numbers', () => {
+    const bankMapping = { txn_id: null, utr_ref: null, amount: 'Deposit', txn_date: 'Date', payer_name: 'Narration', status: null };
+    const { records, errors, skipped } = mapRows([
+      { Date: '01/09/26', Narration: 'NEFT ACME', Deposit: '1,000.00' },
+      { Date: '02/09/26', Narration: 'ELECTRICITY BILL', Deposit: '' },
+      { Date: 'bad', Narration: 'NEFT BETA', Deposit: '50' },
+    ], bankMapping, BANK_FIELDS, 'auto', 'amount');
+
+    expect(skipped).toBe(1);
+    expect(records).toHaveLength(2);
+    expect(errors).toEqual([expect.objectContaining({ row: 4, field: 'txn_date' })]);
   });
 
   it('requires every required field to be mapped', () => {

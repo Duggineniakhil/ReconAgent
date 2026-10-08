@@ -112,7 +112,8 @@ export const BANK_FIELDS: FieldDef[] = [
 /** field key → CSV header (or null when unmapped) */
 export type ColumnMapping = Record<string, string | null>;
 
-const normaliseHeader = (h: string) => h.trim().toLowerCase().replace(/[_\s]+/g, ' ');
+// Ignore case and punctuation: 'Chq./Ref.No.' and 'chq ref no' compare equal
+const normaliseHeader = (h: string) => h.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 
 /**
  * Suggest a header for each field: exact synonym matches first, then headers
@@ -222,17 +223,24 @@ export interface RowError {
 export interface MappedRows {
   records: Record<string, string | number | null>[];
   errors: RowError[];
+  /** Rows dropped because `skipIfEmpty` was blank. */
+  skipped: number;
 }
 
 /**
  * Apply a column mapping to parsed rows, converting amounts and dates and
  * reporting every invalid value with its row number.
+ *
+ * Rows where the `skipIfEmpty` field is blank are dropped rather than
+ * rejected: bank statements put withdrawals and deposits in separate
+ * columns, so with "Deposit" mapped as the amount, withdrawal rows are empty.
  */
 export function mapRows(
   rows: Record<string, string>[],
   mapping: ColumnMapping,
   fields: FieldDef[],
   dateFormat: DateFormat = 'auto',
+  skipIfEmpty?: string,
 ): MappedRows {
   const errors: RowError[] = [];
 
@@ -241,10 +249,18 @@ export function mapRows(
       errors.push({ row: 1, field: field.key, message: `${field.label} is required: choose a column for it` });
     }
   }
-  if (errors.length) return { records: [], errors };
+  if (errors.length) return { records: [], errors, skipped: 0 };
 
-  const records = rows.map((row, i) => {
+  const skipHeader = skipIfEmpty ? mapping[skipIfEmpty] : null;
+  let skipped = 0;
+  const records: Record<string, string | number | null>[] = [];
+
+  rows.forEach((row, i) => {
     const line = i + 2;
+    if (skipHeader && !(row[skipHeader] ?? '').trim()) {
+      skipped++;
+      return;
+    }
     const record: Record<string, string | number | null> = {};
 
     for (const field of fields) {
@@ -269,10 +285,10 @@ export function mapRows(
         record[field.key] = raw;
       }
     }
-    return record;
+    records.push(record);
   });
 
-  return { records, errors };
+  return { records, errors, skipped };
 }
 
 /** Report values of `key` that appear more than once (e.g. invoice IDs). */

@@ -85,7 +85,7 @@ apiRouter.post('/datasets/upload', async (req: Request, res: Response) => {
 
   try {
     const result = await runManager.withLock('ingest', () => importUpload(body));
-    if (result.ok) res.json({ success: true, dataset: result.dataset });
+    if (result.ok) res.json({ success: true, dataset: result.dataset, skipped: result.skipped });
     else res.status(422).json({ error: 'Some rows are invalid', files: result.errors });
   } catch (err: any) {
     res.status(err instanceof BusyError ? 409 : 500).json({ error: err.message });

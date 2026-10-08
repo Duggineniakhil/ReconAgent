@@ -145,14 +145,15 @@ const MAX_ERRORS = 50;
  */
 export async function importUpload(
   req: UploadRequest,
-): Promise<{ ok: true; dataset: DatasetInfo } | { ok: false; errors: FileErrors[] }> {
+): Promise<{ ok: true; dataset: DatasetInfo; skipped: number } | { ok: false; errors: FileErrors[] }> {
   const dateFormat = req.dateFormat ?? 'auto';
 
   const ledgerRows = parseCsv(req.ledger.csv);
   const bankRows = parseCsv(req.bank.csv);
 
   const ledger = mapRows(ledgerRows, req.ledger.mapping, LEDGER_FIELDS, dateFormat);
-  const bank = mapRows(bankRows, req.bank.mapping, BANK_FIELDS, dateFormat);
+  // Withdrawal rows have no deposit amount: skip them instead of rejecting the file
+  const bank = mapRows(bankRows, req.bank.mapping, BANK_FIELDS, dateFormat, 'amount');
 
   // Bank statements often have no transaction ID column: number the rows
   bank.records.forEach((r, i) => {
@@ -166,7 +167,7 @@ export async function importUpload(
   ];
   const bankErrors = [
     ...bank.errors,
-    ...(bankRows.length === 0 ? [{ row: 1, field: '', message: 'File has no data rows' }] : []),
+    ...(bank.records.length === 0 && !bank.errors.length ? [{ row: 1, field: '', message: 'File has no rows with an amount' }] : []),
     ...findDuplicates(bank.records, 'txn_id', 'Transaction ID'),
   ];
 
@@ -181,5 +182,5 @@ export async function importUpload(
     ledger.records as unknown as LedgerInput[],
     bank.records as unknown as BankInput[],
   );
-  return { ok: true, dataset };
+  return { ok: true, dataset, skipped: bank.skipped };
 }
