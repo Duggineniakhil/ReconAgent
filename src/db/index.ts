@@ -1,5 +1,9 @@
-import { Pool, PoolClient, QueryResult } from 'pg';
+import { Pool, PoolClient, QueryResult, types } from 'pg';
 import config from '../config';
+
+// Return DATE columns as plain 'YYYY-MM-DD' strings. By default pg turns them
+// into JS Dates at local midnight, which shifts the day when serialised to UTC.
+types.setTypeParser(types.builtins.DATE, (v: string) => v);
 
 /**
  * PostgreSQL connection pool.

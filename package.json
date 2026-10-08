@@ -11,7 +11,9 @@
     "generate-data": "tsx scripts/generate_data.ts",
     "test-tools": "tsx scripts/test_tools.ts",
     "test-agent": "tsx scripts/test_agent.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "db:backup": "tsx scripts/backup_and_clear.ts",
+    "db:restore": "tsx scripts/restore.ts"
   },
   "keywords": [],
   "author": "",

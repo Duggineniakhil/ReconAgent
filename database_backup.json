@@ -1,0 +1,2059 @@
+{
+  "ledger_records": [
+    {
+      "id": 701,
+      "invoice_id": "INV-2026-0012",
+      "customer_name": "Thakur Rice Mills",
+      "amount": "1892.94",
+      "invoice_date": "2026-08-07",
+      "payment_ref": "PUNB000000001012"
+    },
+    {
+      "id": 702,
+      "invoice_id": "INV-2026-0019",
+      "customer_name": "Kurien Frozen Foods",
+      "amount": "8000.71",
+      "invoice_date": "2026-08-12",
+      "payment_ref": "YESB000000001019"
+    },
+    {
+      "id": 703,
+      "invoice_id": "INV-2026-0047",
+      "customer_name": "Rathore Sand & Gravel",
+      "amount": "8693.62",
+      "invoice_date": "2026-08-26",
+      "payment_ref": "KKBK000000001047"
+    },
+    {
+      "id": 704,
+      "invoice_id": "INV-2026-0050",
+      "customer_name": "Verma Transport Services",
+      "amount": "68592.93",
+      "invoice_date": "2026-08-21",
+      "payment_ref": "UPI/498504391/001050"
+    },
+    {
+      "id": 705,
+      "invoice_id": "INV-2026-0018",
+      "customer_name": "Fernandes Seafood Exports",
+      "amount": "3186.31",
+      "invoice_date": "2026-08-10",
+      "payment_ref": "UPI/619782256/001018"
+    },
+    {
+      "id": 706,
+      "invoice_id": "INV-2026-0023",
+      "customer_name": "Sabharwal Imports",
+      "amount": "66568.93",
+      "invoice_date": "2026-08-26",
+      "payment_ref": "UTIB000000001023"
+    },
+    {
+      "id": 707,
+      "invoice_id": "INV-2026-0069",
+      "customer_name": "Oberoi Hotels Supply",
+      "amount": "60732.44",
+      "invoice_date": "2026-08-14",
+      "payment_ref": "ICIC000000001069"
+    },
+    {
+      "id": 708,
+      "invoice_id": "INV-2026-0059",
+      "customer_name": "Siddiqui Leather Exports",
+      "amount": "174827.06",
+      "invoice_date": "2026-08-12",
+      "payment_ref": "UPI/806935904/001059"
+    },
+    {
+      "id": 709,
+      "invoice_id": "INV-2026-0063",
+      "customer_name": "Patel Fabrics & Textiles",
+      "amount": "27319.88",
+      "invoice_date": "2026-08-28",
+      "payment_ref": "IOBA000000001063"
+    },
+    {
+      "id": 710,
+      "invoice_id": "INV-2026-0056",
+      "customer_name": "Malhotra Furniture House",
+      "amount": "12056.17",
+      "invoice_date": "2026-08-21",
+      "payment_ref": "HDFC000000001056"
+    },
+    {
+      "id": 711,
+      "invoice_id": "INV-2026-0045",
+      "customer_name": "Birla Textiles Outlet",
+      "amount": "47760.85",
+      "invoice_date": "2026-08-30",
+      "payment_ref": "IOBA000000001045"
+    },
+    {
+      "id": 712,
+      "invoice_id": "INV-2026-0015",
+      "customer_name": "D'Souza Bakery Chain",
+      "amount": "13591.16",
+      "invoice_date": "2026-08-10",
+      "payment_ref": "CNRB000000001015"
+    },
+    {
+      "id": 713,
+      "invoice_id": "INV-2026-0021",
+      "customer_name": "Shetty Cashew Industries",
+      "amount": "186813.25",
+      "invoice_date": "2026-08-14",
+      "payment_ref": "UPI/656869759/001021"
+    },
+    {
+      "id": 714,
+      "invoice_id": "INV-2026-0014",
+      "customer_name": "Thomas Rubber Estate",
+      "amount": "41064.65",
+      "invoice_date": "2026-08-13",
+      "payment_ref": "SBIN000000001014"
+    },
+    {
+      "id": 715,
+      "invoice_id": "INV-2026-0055",
+      "customer_name": "Anand Dairy Products",
+      "amount": "5011.76",
+      "invoice_date": "2026-08-22",
+      "payment_ref": "BARB000000001055"
+    },
+    {
+      "id": 716,
+      "invoice_id": "INV-2026-0064",
+      "customer_name": "Khan Textile Mills",
+      "amount": "32036.72",
+      "invoice_date": "2026-08-02",
+      "payment_ref": "UPI/740756401/001064"
+    },
+    {
+      "id": 717,
+      "invoice_id": "INV-2026-0011",
+      "customer_name": "Mahajan Paper Trading",
+      "amount": "11024.95",
+      "invoice_date": "2026-08-22",
+      "payment_ref": "UPI/347936215/001011"
+    },
+    {
+      "id": 718,
+      "invoice_id": "INV-2026-0005",
+      "customer_name": "Bhatia Hardware Store",
+      "amount": "64317.05",
+      "invoice_date": "2026-08-04",
+      "payment_ref": "HDFC000000001005"
+    },
+    {
+      "id": 719,
+      "invoice_id": "INV-2026-0065",
+      "customer_name": "Chatterjee Electricals",
+      "amount": "106379.44",
+      "invoice_date": "2026-08-26",
+      "payment_ref": "HDFC000000001065"
+    },
+    {
+      "id": 720,
+      "invoice_id": "INV-2026-0057",
+      "customer_name": "Rajesh Kumar Enterprises",
+      "amount": "6097.01",
+      "invoice_date": "2026-08-08",
+      "payment_ref": "UPI/991347187/001057"
+    },
+    {
+      "id": 721,
+      "invoice_id": "INV-2026-0016",
+      "customer_name": "Tata Components Dist",
+      "amount": "50357.88",
+      "invoice_date": "2026-08-08",
+      "payment_ref": "UPI/368902208/001016"
+    },
+    {
+      "id": 722,
+      "invoice_id": "INV-2026-0009",
+      "customer_name": "Shekhawat Transport Corp",
+      "amount": "15571.58",
+      "invoice_date": "2026-08-23",
+      "payment_ref": "KKBK000000001009"
+    },
+    {
+      "id": 723,
+      "invoice_id": "INV-2026-0036",
+      "customer_name": "Banerjee Tea Estate",
+      "amount": "13253.85",
+      "invoice_date": "2026-08-13",
+      "payment_ref": "UTIB000000001036"
+    },
+    {
+      "id": 724,
+      "invoice_id": "INV-2026-0007",
+      "customer_name": "Mehta Pharmaceuticals",
+      "amount": "116991.39",
+      "invoice_date": "2026-08-07",
+      "payment_ref": "KKBK000000001007"
+    },
+    {
+      "id": 725,
+      "invoice_id": "INV-2026-0041",
+      "customer_name": "Pillai Coir Industries",
+      "amount": "145125.17",
+      "invoice_date": "2026-08-30",
+      "payment_ref": "UPI/457087411/001041"
+    },
+    {
+      "id": 726,
+      "invoice_id": "INV-2026-0025",
+      "customer_name": "Bose Scientific Instruments",
+      "amount": "444793.21",
+      "invoice_date": "2026-08-19",
+      "payment_ref": "KKBK000000001025"
+    },
+    {
+      "id": 727,
+      "invoice_id": "INV-2026-0013",
+      "customer_name": "Kapoor Garments",
+      "amount": "249159.85",
+      "invoice_date": "2026-08-06",
+      "payment_ref": "ICIC000000001013"
+    },
+    {
+      "id": 728,
+      "invoice_id": "INV-2026-0044",
+      "customer_name": "Menon Rubbers Ltd",
+      "amount": "63595.05",
+      "invoice_date": "2026-08-10",
+      "payment_ref": "IOBA000000001044"
+    },
+    {
+      "id": 729,
+      "invoice_id": "INV-2026-0010",
+      "customer_name": "Chauhan Plywood Industries",
+      "amount": "262696.63",
+      "invoice_date": "2026-08-19",
+      "payment_ref": "HDFC000000001010"
+    },
+    {
+      "id": 730,
+      "invoice_id": "INV-2026-0049",
+      "customer_name": "Luthra Leather Works",
+      "amount": "98236.22",
+      "invoice_date": "2026-08-26",
+      "payment_ref": "PUNB000000001049"
+    },
+    {
+      "id": 731,
+      "invoice_id": "INV-2026-0022",
+      "customer_name": "Jadhav Auto Spares",
+      "amount": "101051.21",
+      "invoice_date": "2026-08-12",
+      "payment_ref": "YESB000000001022"
+    },
+    {
+      "id": 732,
+      "invoice_id": "INV-2026-0062",
+      "customer_name": "Yadav Agri Equipments",
+      "amount": "100820.19",
+      "invoice_date": "2026-08-24",
+      "payment_ref": "UPI/221499273/001062"
+    },
+    {
+      "id": 733,
+      "invoice_id": "INV-2026-0017",
+      "customer_name": "Rao Granite Exports",
+      "amount": "10535.49",
+      "invoice_date": "2026-08-07",
+      "payment_ref": "UPI/725487576/001017"
+    },
+    {
+      "id": 734,
+      "invoice_id": "INV-2026-0002",
+      "customer_name": "Choudhary Marble Industries",
+      "amount": "7571.80",
+      "invoice_date": "2026-08-26",
+      "payment_ref": "YESB000000001002"
+    },
+    {
+      "id": 735,
+      "invoice_id": "INV-2026-0035",
+      "customer_name": "Roy Cement Distributors",
+      "amount": "23089.52",
+      "invoice_date": "2026-08-01",
+      "payment_ref": "UPI/948916208/001035"
+    },
+    {
+      "id": 736,
+      "invoice_id": "INV-2026-0051",
+      "customer_name": "Tandon Steel Tubes",
+      "amount": "139733.24",
+      "invoice_date": "2026-08-02",
+      "payment_ref": "UPI/187805118/001051"
+    },
+    {
+      "id": 737,
+      "invoice_id": "INV-2026-0006",
+      "customer_name": "Godrej Appliances Dealer",
+      "amount": "162461.40",
+      "invoice_date": "2026-08-07",
+      "payment_ref": "UPI/247093719/001006"
+    },
+    {
+      "id": 738,
+      "invoice_id": "INV-2026-0070",
+      "customer_name": "Sethi Wine & Spirits",
+      "amount": "40561.92",
+      "invoice_date": "2026-08-08",
+      "payment_ref": "UTIB000000001070"
+    },
+    {
+      "id": 739,
+      "invoice_id": "INV-2026-0038",
+      "customer_name": "Agarwal Sweets & Namkeen",
+      "amount": "20677.04",
+      "invoice_date": "2026-08-29",
+      "payment_ref": "CNRB000000001038"
+    },
+    {
+      "id": 740,
+      "invoice_id": "INV-2026-0052",
+      "customer_name": "Mukherjee Engineering Works",
+      "amount": "64690.62",
+      "invoice_date": "2026-08-26",
+      "payment_ref": "UTIB000000001052"
+    },
+    {
+      "id": 741,
+      "invoice_id": "INV-2026-0040",
+      "customer_name": "Reddy Agro Industries",
+      "amount": "2794.33",
+      "invoice_date": "2026-08-02",
+      "payment_ref": "UPI/704926440/001040"
+    },
+    {
+      "id": 742,
+      "invoice_id": "INV-2026-0058",
+      "customer_name": "Krishnamurthy Jewellers",
+      "amount": "65400.28",
+      "invoice_date": "2026-08-11",
+      "payment_ref": "UTIB000000001058"
+    },
+    {
+      "id": 743,
+      "invoice_id": "INV-2026-0068",
+      "customer_name": "Shinde Construction Materials",
+      "amount": "44072.09",
+      "invoice_date": "2026-08-21",
+      "payment_ref": "UPI/981136652/001068"
+    },
+    {
+      "id": 744,
+      "invoice_id": "INV-2026-0030",
+      "customer_name": "Patil Sugar Factory",
+      "amount": "5186.86",
+      "invoice_date": "2026-08-05",
+      "payment_ref": "UPI/361886131/001030"
+    },
+    {
+      "id": 745,
+      "invoice_id": "INV-2026-0039",
+      "customer_name": "Das Paper Mills",
+      "amount": "143601.03",
+      "invoice_date": "2026-08-25",
+      "payment_ref": "HDFC000000001039"
+    },
+    {
+      "id": 746,
+      "invoice_id": "INV-2026-0067",
+      "customer_name": "Trivedi Optical House",
+      "amount": "14932.34",
+      "invoice_date": "2026-08-07",
+      "payment_ref": "PUNB000000001067"
+    },
+    {
+      "id": 747,
+      "invoice_id": "INV-2026-0027",
+      "customer_name": "Saxena IT Solutions",
+      "amount": "14156.68",
+      "invoice_date": "2026-08-19",
+      "payment_ref": "UPI/860202867/001027"
+    },
+    {
+      "id": 748,
+      "invoice_id": "INV-2026-0033",
+      "customer_name": "Joshi Construction Co",
+      "amount": "40503.21",
+      "invoice_date": "2026-08-10",
+      "payment_ref": "UPI/232880924/001033"
+    },
+    {
+      "id": 749,
+      "invoice_id": "INV-2026-0024",
+      "customer_name": "Balakrishnan Traders",
+      "amount": "3785.57",
+      "invoice_date": "2026-08-16",
+      "payment_ref": "IOBA000000001024"
+    },
+    {
+      "id": 750,
+      "invoice_id": "INV-2026-0054",
+      "customer_name": "Nair Spices Export",
+      "amount": "303523.85",
+      "invoice_date": "2026-08-03",
+      "payment_ref": "ICIC000000001054"
+    },
+    {
+      "id": 751,
+      "invoice_id": "INV-2026-0004",
+      "customer_name": "Wadia Group Trading",
+      "amount": "114163.20",
+      "invoice_date": "2026-08-24",
+      "payment_ref": "UTIB000000001004"
+    },
+    {
+      "id": 752,
+      "invoice_id": "INV-2026-0048",
+      "customer_name": "Rajan Marine Exports",
+      "amount": "14479.49",
+      "invoice_date": "2026-08-15",
+      "payment_ref": "UPI/667689049/001048"
+    },
+    {
+      "id": 753,
+      "invoice_id": "INV-2026-0001",
+      "customer_name": "Chopra Medical Supplies",
+      "amount": "35217.72",
+      "invoice_date": "2026-08-18",
+      "payment_ref": "UPI/756472591/001001"
+    },
+    {
+      "id": 754,
+      "invoice_id": "INV-2026-0026",
+      "customer_name": "Kulkarni Machine Tools",
+      "amount": "36064.94",
+      "invoice_date": "2026-08-14",
+      "payment_ref": "CNRB000000001026"
+    },
+    {
+      "id": 755,
+      "invoice_id": "INV-2026-0060",
+      "customer_name": "Balakrishnan Traders",
+      "amount": "23286.50",
+      "invoice_date": "2026-08-03",
+      "payment_ref": "BARB000000001060"
+    },
+    {
+      "id": 756,
+      "invoice_id": "INV-2026-0053",
+      "customer_name": "Deshpande Polymers",
+      "amount": "10950.31",
+      "invoice_date": "2026-08-09",
+      "payment_ref": "CNRB000000001053"
+    },
+    {
+      "id": 757,
+      "invoice_id": "INV-2026-0034",
+      "customer_name": "Shaikh Hardware Trading",
+      "amount": "31043.99",
+      "invoice_date": "2026-08-16",
+      "payment_ref": "CNRB000000001034"
+    },
+    {
+      "id": 758,
+      "invoice_id": "INV-2026-0042",
+      "customer_name": "Hegde Plantation Co",
+      "amount": "5335.77",
+      "invoice_date": "2026-08-25",
+      "payment_ref": "ICIC000000001042"
+    },
+    {
+      "id": 759,
+      "invoice_id": "INV-2026-0008",
+      "customer_name": "Singh Auto Components",
+      "amount": "12197.77",
+      "invoice_date": "2026-08-12",
+      "payment_ref": "UPI/877331970/001008"
+    },
+    {
+      "id": 760,
+      "invoice_id": "INV-2026-0046",
+      "customer_name": "Grover Bakery Products",
+      "amount": "183085.61",
+      "invoice_date": "2026-08-12",
+      "payment_ref": "SBIN000000001046"
+    },
+    {
+      "id": 761,
+      "invoice_id": "INV-2026-0029",
+      "customer_name": "Pandey Book Depot",
+      "amount": "194492.74",
+      "invoice_date": "2026-08-27",
+      "payment_ref": "IOBA000000001029"
+    },
+    {
+      "id": 762,
+      "invoice_id": "INV-2026-0028",
+      "customer_name": "Ansari Handicrafts",
+      "amount": "6437.63",
+      "invoice_date": "2026-08-01",
+      "payment_ref": "UPI/682890945/001028"
+    },
+    {
+      "id": 763,
+      "invoice_id": "INV-2026-0032",
+      "customer_name": "Tak Surgical Instruments",
+      "amount": "10495.82",
+      "invoice_date": "2026-08-16",
+      "payment_ref": "UPI/522125122/001032"
+    },
+    {
+      "id": 764,
+      "invoice_id": "INV-2026-0037",
+      "customer_name": "Iyer Silk Emporium",
+      "amount": "82091.87",
+      "invoice_date": "2026-08-12",
+      "payment_ref": "UPI/732488174/001037"
+    },
+    {
+      "id": 765,
+      "invoice_id": "INV-2026-0003",
+      "customer_name": "Bajaj Cycle Components",
+      "amount": "329567.44",
+      "invoice_date": "2026-08-17",
+      "payment_ref": "UPI/190789695/001003"
+    },
+    {
+      "id": 766,
+      "invoice_id": "INV-2026-0031",
+      "customer_name": "Sinha Dairy Farm",
+      "amount": "49125.83",
+      "invoice_date": "2026-08-22",
+      "payment_ref": "IOBA000000001031"
+    },
+    {
+      "id": 767,
+      "invoice_id": "INV-2026-0061",
+      "customer_name": "Sharma Electronics Pvt Ltd",
+      "amount": "174015.13",
+      "invoice_date": "2026-08-15",
+      "payment_ref": "HDFC000000001061"
+    },
+    {
+      "id": 768,
+      "invoice_id": "INV-2026-0043",
+      "customer_name": "Gupta Steel Works",
+      "amount": "485629.35",
+      "invoice_date": "2026-08-08",
+      "payment_ref": "KKBK000000001043"
+    },
+    {
+      "id": 769,
+      "invoice_id": "INV-2026-0020",
+      "customer_name": "Krishnamurthy Jewellers",
+      "amount": "129920.29",
+      "invoice_date": "2026-08-05",
+      "payment_ref": "PUNB000000001020"
+    },
+    {
+      "id": 770,
+      "invoice_id": "INV-2026-0066",
+      "customer_name": "Rajesh Kumar Enterprises",
+      "amount": "45450.86",
+      "invoice_date": "2026-08-06",
+      "payment_ref": "UTIB000000001066"
+    }
+  ],
+  "bank_transactions": [
+    {
+      "id": 751,
+      "txn_id": "TXN-00028",
+      "utr_ref": "UPI/682890945/001028",
+      "amount": "6437.63",
+      "txn_date": "2026-08-01",
+      "payer_name": "Ansari Handicrafts",
+      "status": "settled"
+    },
+    {
+      "id": 752,
+      "txn_id": "TXN-00014",
+      "utr_ref": "SBIN000000001014",
+      "amount": "41064.65",
+      "txn_date": "2026-08-13",
+      "payer_name": "Thomas Rubber Estate",
+      "status": "settled"
+    },
+    {
+      "id": 753,
+      "txn_id": "TXN-00052",
+      "utr_ref": "UTIB000000001052",
+      "amount": "64690.62",
+      "txn_date": "2026-08-27",
+      "payer_name": "Mukherjee Engineering Works",
+      "status": "settled"
+    },
+    {
+      "id": 754,
+      "txn_id": "TXN-00062",
+      "utr_ref": "HDFC000000001061-PART2",
+      "amount": "111683.03",
+      "txn_date": "2026-08-16",
+      "payer_name": "Sharma Electronics Pvt Ltd",
+      "status": "settled"
+    },
+    {
+      "id": 755,
+      "txn_id": "TXN-00051",
+      "utr_ref": "UPI/187805118/001051",
+      "amount": "139733.24",
+      "txn_date": "2026-08-03",
+      "payer_name": "Tandon Steel Tubes",
+      "status": "settled"
+    },
+    {
+      "id": 756,
+      "txn_id": "TXN-00033",
+      "utr_ref": "UPI/232880924/001033",
+      "amount": "40503.21",
+      "txn_date": "2026-08-10",
+      "payer_name": "Joshi Construction Co",
+      "status": "settled"
+    },
+    {
+      "id": 757,
+      "txn_id": "TXN-00007",
+      "utr_ref": "KKBK000000001007",
+      "amount": "116991.39",
+      "txn_date": "2026-08-07",
+      "payer_name": "Mehta Pharmaceuticals",
+      "status": "settled"
+    },
+    {
+      "id": 758,
+      "txn_id": "TXN-00067",
+      "utr_ref": "UPI/981136652/001068",
+      "amount": "44072.09",
+      "txn_date": "2026-08-21",
+      "payer_name": "Shinde Construction Materials",
+      "status": "settled"
+    },
+    {
+      "id": 759,
+      "txn_id": "TXN-00009",
+      "utr_ref": "KKBK000000001009",
+      "amount": "15571.58",
+      "txn_date": "2026-08-23",
+      "payer_name": "Shekhawat Transport Corp",
+      "status": "settled"
+    },
+    {
+      "id": 760,
+      "txn_id": "TXN-00063",
+      "utr_ref": "UPI/221499273/001062-PART1",
+      "amount": "56858.03",
+      "txn_date": "2026-08-24",
+      "payer_name": "Yadav Agri Equipments",
+      "status": "settled"
+    },
+    {
+      "id": 761,
+      "txn_id": "TXN-00031",
+      "utr_ref": "IOBA000000001031",
+      "amount": "49125.83",
+      "txn_date": "2026-08-22",
+      "payer_name": "Sinha Dairy Farm",
+      "status": "settled"
+    },
+    {
+      "id": 762,
+      "txn_id": "TXN-00054",
+      "utr_ref": "ICIC000000001054",
+      "amount": "303523.85",
+      "txn_date": "2026-08-05",
+      "payer_name": "Nair Spices Export",
+      "status": "settled"
+    },
+    {
+      "id": 763,
+      "txn_id": "TXN-00037",
+      "utr_ref": "UPI/732488174/001037",
+      "amount": "82091.87",
+      "txn_date": "2026-08-12",
+      "payer_name": "Iyer Silk Emporium",
+      "status": "settled"
+    },
+    {
+      "id": 764,
+      "txn_id": "TXN-00038",
+      "utr_ref": "CNRB000000001038",
+      "amount": "20677.04",
+      "txn_date": "2026-08-29",
+      "payer_name": "Agarwal Sweets & Namkeen",
+      "status": "settled"
+    },
+    {
+      "id": 765,
+      "txn_id": "TXN-00020",
+      "utr_ref": "PUNB000000001020",
+      "amount": "129920.29",
+      "txn_date": "2026-08-05",
+      "payer_name": "Krishnamurthy Jewellers",
+      "status": "settled"
+    },
+    {
+      "id": 766,
+      "txn_id": "TXN-00010",
+      "utr_ref": "HDFC000000001010",
+      "amount": "262696.63",
+      "txn_date": "2026-08-19",
+      "payer_name": "Chauhan Plywood Industries",
+      "status": "settled"
+    },
+    {
+      "id": 767,
+      "txn_id": "TXN-00061",
+      "utr_ref": "HDFC000000001061-PART1",
+      "amount": "62332.10",
+      "txn_date": "2026-08-15",
+      "payer_name": "Sharma Electronics Pvt Ltd",
+      "status": "settled"
+    },
+    {
+      "id": 768,
+      "txn_id": "TXN-00065",
+      "utr_ref": "IOBA000000001063-PART1",
+      "amount": "8740.71",
+      "txn_date": "2026-08-28",
+      "payer_name": "Patel Fabrics & Textiles",
+      "status": "settled"
+    },
+    {
+      "id": 769,
+      "txn_id": "TXN-00018",
+      "utr_ref": "UPI/619782256/001018",
+      "amount": "3186.31",
+      "txn_date": "2026-08-10",
+      "payer_name": "Fernandes Seafood Exports",
+      "status": "settled"
+    },
+    {
+      "id": 770,
+      "txn_id": "TXN-00068",
+      "utr_ref": "UPI/981136652/001068",
+      "amount": "118287.69",
+      "txn_date": "2026-08-20",
+      "payer_name": "Mishra Fertilizers",
+      "status": "settled"
+    },
+    {
+      "id": 771,
+      "txn_id": "TXN-00022",
+      "utr_ref": "YESB000000001022",
+      "amount": "101051.21",
+      "txn_date": "2026-08-12",
+      "payer_name": "Jadhav Auto Spares",
+      "status": "settled"
+    },
+    {
+      "id": 772,
+      "txn_id": "TXN-00027",
+      "utr_ref": "UPI/860202867/001027",
+      "amount": "14156.68",
+      "txn_date": "2026-08-19",
+      "payer_name": "Saxena IT Solutions",
+      "status": "settled"
+    },
+    {
+      "id": 773,
+      "txn_id": "TXN-00004",
+      "utr_ref": "UTIB000000001004",
+      "amount": "114163.20",
+      "txn_date": "2026-08-24",
+      "payer_name": "Wadia Group Trading",
+      "status": "settled"
+    },
+    {
+      "id": 774,
+      "txn_id": "TXN-00075",
+      "utr_ref": "UTIB000000001073",
+      "amount": "97904.03",
+      "txn_date": "2026-08-12",
+      "payer_name": "George Timber Merchants",
+      "status": "reversed"
+    },
+    {
+      "id": 775,
+      "txn_id": "TXN-00015",
+      "utr_ref": "CNRB000000001015",
+      "amount": "13591.16",
+      "txn_date": "2026-08-10",
+      "payer_name": "D'Souza Bakery Chain",
+      "status": "settled"
+    },
+    {
+      "id": 776,
+      "txn_id": "TXN-00059",
+      "utr_ref": "UPI/806935904/001059",
+      "amount": "174827.06",
+      "txn_date": "2026-08-12",
+      "payer_name": "Md. Siddiqui Leather Exp",
+      "status": "settled"
+    },
+    {
+      "id": 777,
+      "txn_id": "TXN-00057",
+      "utr_ref": "UPI/991347187/001057",
+      "amount": "6097.01",
+      "txn_date": "2026-08-08",
+      "payer_name": "R. K. Enterprises",
+      "status": "settled"
+    },
+    {
+      "id": 778,
+      "txn_id": "TXN-00012",
+      "utr_ref": "PUNB000000001012",
+      "amount": "1892.94",
+      "txn_date": "2026-08-07",
+      "payer_name": "Thakur Rice Mills",
+      "status": "settled"
+    },
+    {
+      "id": 779,
+      "txn_id": "TXN-00017",
+      "utr_ref": "UPI/725487576/001017",
+      "amount": "10535.49",
+      "txn_date": "2026-08-07",
+      "payer_name": "Rao Granite Exports",
+      "status": "settled"
+    },
+    {
+      "id": 780,
+      "txn_id": "TXN-00035",
+      "utr_ref": "UPI/948916208/001035",
+      "amount": "23089.52",
+      "txn_date": "2026-08-01",
+      "payer_name": "Roy Cement Distributors",
+      "status": "settled"
+    },
+    {
+      "id": 781,
+      "txn_id": "TXN-00019",
+      "utr_ref": "YESB000000001019",
+      "amount": "8000.71",
+      "txn_date": "2026-08-12",
+      "payer_name": "Kurien Frozen Foods",
+      "status": "settled"
+    },
+    {
+      "id": 782,
+      "txn_id": "TXN-00021",
+      "utr_ref": "UPI/656869759/001021",
+      "amount": "186813.25",
+      "txn_date": "2026-08-14",
+      "payer_name": "Shetty Cashew Industries",
+      "status": "settled"
+    },
+    {
+      "id": 783,
+      "txn_id": "TXN-00045",
+      "utr_ref": "IOBA000000001045",
+      "amount": "47762.85",
+      "txn_date": "2026-08-30",
+      "payer_name": "Birla Textiles Outlet",
+      "status": "settled"
+    },
+    {
+      "id": 784,
+      "txn_id": "TXN-00023",
+      "utr_ref": "UTIB000000001023",
+      "amount": "66568.93",
+      "txn_date": "2026-08-26",
+      "payer_name": "Sabharwal Imports",
+      "status": "settled"
+    },
+    {
+      "id": 785,
+      "txn_id": "TXN-00041",
+      "utr_ref": "UPI/457087411/001041",
+      "amount": "145125.17",
+      "txn_date": "2026-08-30",
+      "payer_name": "Pillai Coir Industries",
+      "status": "settled"
+    },
+    {
+      "id": 786,
+      "txn_id": "TXN-00008",
+      "utr_ref": "UPI/877331970/001008",
+      "amount": "12197.77",
+      "txn_date": "2026-08-12",
+      "payer_name": "Singh Auto Components",
+      "status": "settled"
+    },
+    {
+      "id": 787,
+      "txn_id": "TXN-00070",
+      "utr_ref": "ICIC000000001069",
+      "amount": "17089.05",
+      "txn_date": "2026-08-16",
+      "payer_name": "Meena Handicraft Emporium",
+      "status": "settled"
+    },
+    {
+      "id": 788,
+      "txn_id": "TXN-00069",
+      "utr_ref": "ICIC000000001069",
+      "amount": "60732.44",
+      "txn_date": "2026-08-14",
+      "payer_name": "Oberoi Hotels Supply",
+      "status": "settled"
+    },
+    {
+      "id": 789,
+      "txn_id": "TXN-00016",
+      "utr_ref": "UPI/368902208/001016",
+      "amount": "50357.88",
+      "txn_date": "2026-08-08",
+      "payer_name": "Tata Components Dist",
+      "status": "settled"
+    },
+    {
+      "id": 790,
+      "txn_id": "TXN-00046",
+      "utr_ref": "SBIN000000001046",
+      "amount": "183080.61",
+      "txn_date": "2026-08-12",
+      "payer_name": "Grover Bakery Products",
+      "status": "settled"
+    },
+    {
+      "id": 791,
+      "txn_id": "TXN-00026",
+      "utr_ref": "CNRB000000001026",
+      "amount": "36064.94",
+      "txn_date": "2026-08-14",
+      "payer_name": "Kulkarni Machine Tools",
+      "status": "settled"
+    },
+    {
+      "id": 792,
+      "txn_id": "TXN-00055",
+      "utr_ref": "BARB000000001055",
+      "amount": "5011.76",
+      "txn_date": "2026-08-24",
+      "payer_name": "Anand Dairy Products",
+      "status": "settled"
+    },
+    {
+      "id": 793,
+      "txn_id": "TXN-00049",
+      "utr_ref": "PUNB000000001049",
+      "amount": "98233.22",
+      "txn_date": "2026-08-26",
+      "payer_name": "Luthra Leather Works",
+      "status": "settled"
+    },
+    {
+      "id": 794,
+      "txn_id": "TXN-00074",
+      "utr_ref": "PUNB000000001072",
+      "amount": "42032.50",
+      "txn_date": "2026-08-18",
+      "payer_name": "Dubey Logistics Pvt Ltd",
+      "status": "settled"
+    },
+    {
+      "id": 795,
+      "txn_id": "TXN-00002",
+      "utr_ref": "YESB000000001002",
+      "amount": "7571.80",
+      "txn_date": "2026-08-26",
+      "payer_name": "Choudhary Marble Industries",
+      "status": "settled"
+    },
+    {
+      "id": 796,
+      "txn_id": "TXN-00050",
+      "utr_ref": "UPI/498504391/001050",
+      "amount": "68592.93",
+      "txn_date": "2026-08-23",
+      "payer_name": "Verma Transport Services",
+      "status": "settled"
+    },
+    {
+      "id": 797,
+      "txn_id": "TXN-00043",
+      "utr_ref": "KKBK000000001043",
+      "amount": "485634.35",
+      "txn_date": "2026-08-08",
+      "payer_name": "Gupta Steel Works",
+      "status": "settled"
+    },
+    {
+      "id": 798,
+      "txn_id": "TXN-00005",
+      "utr_ref": "HDFC000000001005",
+      "amount": "64317.05",
+      "txn_date": "2026-08-04",
+      "payer_name": "Bhatia Hardware Store",
+      "status": "settled"
+    },
+    {
+      "id": 799,
+      "txn_id": "TXN-00003",
+      "utr_ref": "UPI/190789695/001003",
+      "amount": "329567.44",
+      "txn_date": "2026-08-17",
+      "payer_name": "Bajaj Cycle Components",
+      "status": "settled"
+    },
+    {
+      "id": 800,
+      "txn_id": "TXN-00001",
+      "utr_ref": "UPI/756472591/001001",
+      "amount": "35217.72",
+      "txn_date": "2026-08-18",
+      "payer_name": "Chopra Medical Supplies",
+      "status": "settled"
+    },
+    {
+      "id": 801,
+      "txn_id": "TXN-00056",
+      "utr_ref": "HDFC000000001056",
+      "amount": "12056.17",
+      "txn_date": "2026-08-22",
+      "payer_name": "Malhotra Furniture House",
+      "status": "settled"
+    },
+    {
+      "id": 802,
+      "txn_id": "TXN-00047",
+      "utr_ref": "KKBK000000001047",
+      "amount": "8689.62",
+      "txn_date": "2026-08-26",
+      "payer_name": "Rathore Sand & Gravel",
+      "status": "settled"
+    },
+    {
+      "id": 803,
+      "txn_id": "TXN-00073",
+      "utr_ref": "CNRB000000001071",
+      "amount": "81719.71",
+      "txn_date": "2026-08-18",
+      "payer_name": "Tiwari Oil Mills",
+      "status": "pending"
+    },
+    {
+      "id": 804,
+      "txn_id": "TXN-00030",
+      "utr_ref": "UPI/361886131/001030",
+      "amount": "5186.86",
+      "txn_date": "2026-08-05",
+      "payer_name": "Patil Sugar Factory",
+      "status": "settled"
+    },
+    {
+      "id": 805,
+      "txn_id": "TXN-00032",
+      "utr_ref": "UPI/522125122/001032",
+      "amount": "10495.82",
+      "txn_date": "2026-08-16",
+      "payer_name": "Tak Surgical Instruments",
+      "status": "settled"
+    },
+    {
+      "id": 806,
+      "txn_id": "TXN-00040",
+      "utr_ref": "UPI/704926440/001040",
+      "amount": "2794.33",
+      "txn_date": "2026-08-02",
+      "payer_name": "Reddy Agro Industries",
+      "status": "settled"
+    },
+    {
+      "id": 807,
+      "txn_id": "TXN-00064",
+      "utr_ref": "UPI/221499273/001062-PART2",
+      "amount": "43962.16",
+      "txn_date": "2026-08-25",
+      "payer_name": "Yadav Agri Equipments",
+      "status": "settled"
+    },
+    {
+      "id": 808,
+      "txn_id": "TXN-00060",
+      "utr_ref": "BARB000000001060",
+      "amount": "23286.50",
+      "txn_date": "2026-08-03",
+      "payer_name": "Bala Krishnan Traders",
+      "status": "settled"
+    },
+    {
+      "id": 809,
+      "txn_id": "TXN-00058",
+      "utr_ref": "UTIB000000001058",
+      "amount": "65400.28",
+      "txn_date": "2026-08-11",
+      "payer_name": "K. Murthy Jewellers",
+      "status": "settled"
+    },
+    {
+      "id": 810,
+      "txn_id": "TXN-00011",
+      "utr_ref": "UPI/347936215/001011",
+      "amount": "11024.95",
+      "txn_date": "2026-08-22",
+      "payer_name": "Mahajan Paper Trading",
+      "status": "settled"
+    },
+    {
+      "id": 811,
+      "txn_id": "TXN-00036",
+      "utr_ref": "UTIB000000001036",
+      "amount": "13253.85",
+      "txn_date": "2026-08-13",
+      "payer_name": "Banerjee Tea Estate",
+      "status": "settled"
+    },
+    {
+      "id": 812,
+      "txn_id": "TXN-00025",
+      "utr_ref": "KKBK000000001025",
+      "amount": "444793.21",
+      "txn_date": "2026-08-19",
+      "payer_name": "Bose Scientific Instruments",
+      "status": "settled"
+    },
+    {
+      "id": 813,
+      "txn_id": "TXN-00066",
+      "utr_ref": "IOBA000000001063-PART2",
+      "amount": "18579.17",
+      "txn_date": "2026-08-29",
+      "payer_name": "Patel Fabrics & Textiles",
+      "status": "settled"
+    },
+    {
+      "id": 814,
+      "txn_id": "TXN-00072",
+      "utr_ref": "UTIB000000001070",
+      "amount": "83095.50",
+      "txn_date": "2026-08-10",
+      "payer_name": "Nambiar Ayurvedic Pharmacy",
+      "status": "settled"
+    },
+    {
+      "id": 815,
+      "txn_id": "TXN-00029",
+      "utr_ref": "IOBA000000001029",
+      "amount": "194492.74",
+      "txn_date": "2026-08-27",
+      "payer_name": "Pandey Book Depot",
+      "status": "settled"
+    },
+    {
+      "id": 816,
+      "txn_id": "TXN-00053",
+      "utr_ref": "CNRB000000001053",
+      "amount": "10950.31",
+      "txn_date": "2026-08-12",
+      "payer_name": "Deshpande Polymers",
+      "status": "settled"
+    },
+    {
+      "id": 817,
+      "txn_id": "TXN-00044",
+      "utr_ref": "IOBA000000001044",
+      "amount": "63598.05",
+      "txn_date": "2026-08-10",
+      "payer_name": "Menon Rubbers Ltd",
+      "status": "settled"
+    },
+    {
+      "id": 818,
+      "txn_id": "TXN-00006",
+      "utr_ref": "UPI/247093719/001006",
+      "amount": "162461.40",
+      "txn_date": "2026-08-07",
+      "payer_name": "Godrej Appliances Dealer",
+      "status": "settled"
+    },
+    {
+      "id": 819,
+      "txn_id": "TXN-00042",
+      "utr_ref": "ICIC000000001042",
+      "amount": "5335.77",
+      "txn_date": "2026-08-25",
+      "payer_name": "Hegde Plantation Co",
+      "status": "settled"
+    },
+    {
+      "id": 820,
+      "txn_id": "TXN-00013",
+      "utr_ref": "ICIC000000001013",
+      "amount": "249159.85",
+      "txn_date": "2026-08-06",
+      "payer_name": "Kapoor Garments",
+      "status": "settled"
+    },
+    {
+      "id": 821,
+      "txn_id": "TXN-00071",
+      "utr_ref": "UTIB000000001070",
+      "amount": "40561.92",
+      "txn_date": "2026-08-08",
+      "payer_name": "Sethi Wine & Spirits",
+      "status": "settled"
+    },
+    {
+      "id": 822,
+      "txn_id": "TXN-00039",
+      "utr_ref": "HDFC000000001039",
+      "amount": "143601.03",
+      "txn_date": "2026-08-25",
+      "payer_name": "Das Paper Mills",
+      "status": "settled"
+    },
+    {
+      "id": 823,
+      "txn_id": "TXN-00034",
+      "utr_ref": "CNRB000000001034",
+      "amount": "31043.99",
+      "txn_date": "2026-08-16",
+      "payer_name": "Shaikh Hardware Trading",
+      "status": "settled"
+    },
+    {
+      "id": 824,
+      "txn_id": "TXN-00024",
+      "utr_ref": "IOBA000000001024",
+      "amount": "3785.57",
+      "txn_date": "2026-08-16",
+      "payer_name": "Balakrishnan Traders",
+      "status": "settled"
+    },
+    {
+      "id": 825,
+      "txn_id": "TXN-00048",
+      "utr_ref": "UPI/667689049/001048",
+      "amount": "14483.49",
+      "txn_date": "2026-08-15",
+      "payer_name": "Rajan Marine Exports",
+      "status": "settled"
+    }
+  ],
+  "matches": [
+    {
+      "id": 6,
+      "ledger_id": 701,
+      "bank_txn_id": 778,
+      "method": "exact",
+      "confidence": "1.000",
+      "reasoning": "Precheck: exact match on reference PUNB000000001012 and amount 1892.94. Single unique reference, no ambiguity.",
+      "created_at": "2026-09-04T09:44:05.114Z"
+    },
+    {
+      "id": 7,
+      "ledger_id": 702,
+      "bank_txn_id": 781,
+      "method": "exact",
+      "confidence": "1.000",
+      "reasoning": "Precheck: exact match on reference YESB000000001019 and amount 8000.71. Single unique reference, no ambiguity.",
+      "created_at": "2026-09-04T09:44:05.131Z"
+    },
+    {
+      "id": 8,
+      "ledger_id": 704,
+      "bank_txn_id": 796,
+      "method": "exact",
+      "confidence": "1.000",
+      "reasoning": "Precheck: exact match on reference UPI/498504391/001050 and amount 68592.93. Single unique reference, no ambiguity.",
+      "created_at": "2026-09-04T09:45:29.636Z"
+    },
+    {
+      "id": 9,
+      "ledger_id": 705,
+      "bank_txn_id": 769,
+      "method": "exact",
+      "confidence": "1.000",
+      "reasoning": "Precheck: exact match on reference UPI/619782256/001018 and amount 3186.31. Single unique reference, no ambiguity.",
+      "created_at": "2026-09-04T09:46:14.182Z"
+    },
+    {
+      "id": 10,
+      "ledger_id": 706,
+      "bank_txn_id": 784,
+      "method": "exact",
+      "confidence": "1.000",
+      "reasoning": "Precheck: exact match on reference UTIB000000001023 and amount 66568.93. Single unique reference, no ambiguity.",
+      "created_at": "2026-09-04T09:46:14.188Z"
+    },
+    {
+      "id": 11,
+      "ledger_id": 708,
+      "bank_txn_id": 776,
+      "method": "exact",
+      "confidence": "1.000",
+      "reasoning": "Precheck: exact match on reference UPI/806935904/001059 and amount 174827.06. Single unique reference, no ambiguity.",
+      "created_at": "2026-09-04T09:47:35.239Z"
+    },
+    {
+      "id": 12,
+      "ledger_id": 710,
+      "bank_txn_id": 801,
+      "method": "exact",
+      "confidence": "1.000",
+      "reasoning": "Precheck: exact match on reference HDFC000000001056 and amount 12056.17. Single unique reference, no ambiguity.",
+      "created_at": "2026-09-04T09:52:05.599Z"
+    },
+    {
+      "id": 13,
+      "ledger_id": 712,
+      "bank_txn_id": 775,
+      "method": "exact",
+      "confidence": "1.000",
+      "reasoning": "Precheck: exact match on reference CNRB000000001015 and amount 13591.16. Single unique reference, no ambiguity.",
+      "created_at": "2026-09-04T09:54:02.410Z"
+    },
+    {
+      "id": 14,
+      "ledger_id": 712,
+      "bank_txn_id": 775,
+      "method": "exact",
+      "confidence": "1.000",
+      "reasoning": "Precheck: exact match on reference CNRB000000001015 and amount 13591.16. Single unique reference, no ambiguity.",
+      "created_at": "2026-09-04T09:54:13.934Z"
+    },
+    {
+      "id": 15,
+      "ledger_id": 713,
+      "bank_txn_id": 782,
+      "method": "exact",
+      "confidence": "1.000",
+      "reasoning": "Precheck: exact match on reference UPI/656869759/001021 and amount 186813.25. Single unique reference, no ambiguity.",
+      "created_at": "2026-09-04T09:54:13.948Z"
+    },
+    {
+      "id": 16,
+      "ledger_id": 714,
+      "bank_txn_id": 752,
+      "method": "exact",
+      "confidence": "1.000",
+      "reasoning": "Precheck: exact match on reference SBIN000000001014 and amount 41064.65. Single unique reference, no ambiguity.",
+      "created_at": "2026-09-04T09:54:13.965Z"
+    },
+    {
+      "id": 17,
+      "ledger_id": 715,
+      "bank_txn_id": 792,
+      "method": "exact",
+      "confidence": "1.000",
+      "reasoning": "Precheck: exact match on reference BARB000000001055 and amount 5011.76. Single unique reference, no ambiguity.",
+      "created_at": "2026-09-04T09:54:13.976Z"
+    },
+    {
+      "id": 18,
+      "ledger_id": 717,
+      "bank_txn_id": 810,
+      "method": "exact",
+      "confidence": "1.000",
+      "reasoning": "Precheck: exact match on reference UPI/347936215/001011 and amount 11024.95. Single unique reference, no ambiguity.",
+      "created_at": "2026-09-04T09:55:17.658Z"
+    },
+    {
+      "id": 19,
+      "ledger_id": 718,
+      "bank_txn_id": 798,
+      "method": "exact",
+      "confidence": "1.000",
+      "reasoning": "Precheck: exact match on reference HDFC000000001005 and amount 64317.05. Single unique reference, no ambiguity.",
+      "created_at": "2026-09-04T09:55:17.667Z"
+    },
+    {
+      "id": 20,
+      "ledger_id": 711,
+      "bank_txn_id": 783,
+      "method": "reasoned",
+      "confidence": "1.000",
+      "reasoning": "Manually resolved by user",
+      "created_at": "2026-09-04T10:29:29.139Z"
+    }
+  ],
+  "exceptions": [
+    {
+      "id": 3,
+      "ledger_id": 703,
+      "reason": "unexplained_discrepancy",
+      "best_candidate_bank_txn_id": 802,
+      "reasoning": "Bank transaction TXN-00047 matches the payment reference (KKBK000000001047), transaction date (2026-08-26), and customer name (Rathore Sand & Gravel). However, there is an unexplained amount discrepancy of 4.00 (ledger amount 8693.62 vs bank transaction amount 8689.62), which exceeds standard rounding tolerance.",
+      "status": "open",
+      "resolved_by": null,
+      "created_at": "2026-09-04T09:45:29.625Z"
+    },
+    {
+      "id": 4,
+      "ledger_id": 707,
+      "reason": "duplicate_reference",
+      "best_candidate_bank_txn_id": 788,
+      "reasoning": "The payment reference ICIC000000001069 was found in multiple bank transactions (TXN-00069 and TXN-00070). Due to the duplicate payment reference, this record cannot be automatically matched and requires human review.",
+      "status": "open",
+      "resolved_by": null,
+      "created_at": "2026-09-04T09:47:35.232Z"
+    },
+    {
+      "id": 5,
+      "ledger_id": 709,
+      "reason": "no_candidate",
+      "best_candidate_bank_txn_id": null,
+      "reasoning": "No matching bank transaction was found for payment reference IOBA000000001063, amount 27319.88, and invoice date 2026-08-28 in either exact or fuzzy candidate searches.",
+      "status": "open",
+      "resolved_by": null,
+      "created_at": "2026-09-04T09:52:05.589Z"
+    },
+    {
+      "id": 6,
+      "ledger_id": 711,
+      "reason": "unexplained_discrepancy",
+      "best_candidate_bank_txn_id": 783,
+      "reasoning": "The bank transaction (TXN-00045) matches on payment reference (IOBA000000001045), transaction date (2026-08-30), and payer name (Birla Textiles Outlet). However, the bank amount of 47762.85 exceeds the ledger amount of 47760.85 by 2.00, which is beyond acceptable rounding tolerance and lacks an explanation. Escalating for human review.",
+      "status": "open",
+      "resolved_by": null,
+      "created_at": "2026-09-04T09:54:02.402Z"
+    },
+    {
+      "id": 8,
+      "ledger_id": 716,
+      "reason": "no_candidate",
+      "best_candidate_bank_txn_id": null,
+      "reasoning": "No bank transaction matching reference UPI/740756401/001064 or amount 32036.72 near date 2026-08-02 was found in the bank records.",
+      "status": "rejected",
+      "resolved_by": "human",
+      "created_at": "2026-09-04T09:55:17.649Z"
+    },
+    {
+      "id": 7,
+      "ledger_id": 711,
+      "reason": "unexplained_discrepancy",
+      "best_candidate_bank_txn_id": 783,
+      "reasoning": "The UTR reference (IOBA000000001045), payer name (Birla Textiles Outlet), and transaction date (2026-08-30) match the ledger record, but there is an unexplained $2.00 amount discrepancy between the ledger (47,760.85) and the bank transaction (47,762.85), exceeding standard rounding tolerance.",
+      "status": "approved",
+      "resolved_by": "human",
+      "created_at": "2026-09-04T09:54:13.921Z"
+    }
+  ],
+  "audit_log": [
+    {
+      "id": 23,
+      "ledger_id": 701,
+      "turn_number": 0,
+      "tool_name": "precheck_exact",
+      "tool_input": {
+        "amount": 1892.94,
+        "reference": "PUNB000000001012"
+      },
+      "tool_result": {
+        "method": "exact",
+        "matched": true,
+        "bank_db_id": 778,
+        "bank_txn_id": "TXN-00012"
+      },
+      "created_at": "2026-09-04T09:44:05.124Z"
+    },
+    {
+      "id": 24,
+      "ledger_id": 702,
+      "turn_number": 0,
+      "tool_name": "precheck_exact",
+      "tool_input": {
+        "amount": 8000.71,
+        "reference": "YESB000000001019"
+      },
+      "tool_result": {
+        "method": "exact",
+        "matched": true,
+        "bank_db_id": 781,
+        "bank_txn_id": "TXN-00019"
+      },
+      "created_at": "2026-09-04T09:44:05.132Z"
+    },
+    {
+      "id": 25,
+      "ledger_id": 703,
+      "turn_number": 1,
+      "tool_name": "find_exact_candidates",
+      "tool_input": {
+        "amount": 8693.62,
+        "reference": "KKBK000000001047"
+      },
+      "tool_result": {
+        "candidates": []
+      },
+      "created_at": "2026-09-04T09:44:07.628Z"
+    },
+    {
+      "id": 26,
+      "ledger_id": 703,
+      "turn_number": 2,
+      "tool_name": "find_fuzzy_candidates",
+      "tool_input": {
+        "date": "2026-08-26",
+        "amount": 8693.62,
+        "customer_name": "Rathore Sand & Gravel"
+      },
+      "tool_result": {
+        "candidates": [
+          {
+            "id": 802,
+            "amount": 8689.62,
+            "status": "settled",
+            "txn_id": "TXN-00047",
+            "utr_ref": "KKBK000000001047",
+            "txn_date": "2026-08-26",
+            "payer_name": "Rathore Sand & Gravel",
+            "amount_diff": "4.00",
+            "date_diff_days": 0
+          },
+          {
+            "id": 768,
+            "amount": 8740.71,
+            "status": "settled",
+            "txn_id": "TXN-00065",
+            "utr_ref": "IOBA000000001063-PART1",
+            "txn_date": "2026-08-28",
+            "payer_name": "Patel Fabrics & Textiles",
+            "amount_diff": "47.09",
+            "date_diff_days": 2
+          }
+        ]
+      },
+      "created_at": "2026-09-04T09:44:27.936Z"
+    },
+    {
+      "id": 27,
+      "ledger_id": 703,
+      "turn_number": 3,
+      "tool_name": "check_duplicate_ref",
+      "tool_input": {
+        "reference": "KKBK000000001047"
+      },
+      "tool_result": {
+        "count": 1,
+        "txn_ids": [
+          "TXN-00047"
+        ],
+        "reference": "KKBK000000001047",
+        "is_duplicate": false
+      },
+      "created_at": "2026-09-04T09:44:55.189Z"
+    },
+    {
+      "id": 28,
+      "ledger_id": 703,
+      "turn_number": 4,
+      "tool_name": "flag_exception",
+      "tool_input": {
+        "reason": "unexplained_discrepancy",
+        "reasoning": "Bank transaction TXN-00047 matches the payment reference (KKBK000000001047), transaction date (2026-08-26), and customer name (Rathore Sand & Gravel). However, there is an unexplained amount discrepancy of 4.00 (ledger amount 8693.62 vs bank transaction amount 8689.62), which exceeds standard rounding tolerance.",
+        "best_candidate_id": "TXN-00047"
+      },
+      "tool_result": {
+        "status": "flagged"
+      },
+      "created_at": "2026-09-04T09:45:29.607Z"
+    },
+    {
+      "id": 29,
+      "ledger_id": 704,
+      "turn_number": 0,
+      "tool_name": "precheck_exact",
+      "tool_input": {
+        "amount": 68592.93,
+        "reference": "UPI/498504391/001050"
+      },
+      "tool_result": {
+        "method": "exact",
+        "matched": true,
+        "bank_db_id": 796,
+        "bank_txn_id": "TXN-00050"
+      },
+      "created_at": "2026-09-04T09:45:29.640Z"
+    },
+    {
+      "id": 30,
+      "ledger_id": 705,
+      "turn_number": 0,
+      "tool_name": "precheck_exact",
+      "tool_input": {
+        "amount": 3186.31,
+        "reference": "UPI/619782256/001018"
+      },
+      "tool_result": {
+        "method": "exact",
+        "matched": true,
+        "bank_db_id": 769,
+        "bank_txn_id": "TXN-00018"
+      },
+      "created_at": "2026-09-04T09:46:14.184Z"
+    },
+    {
+      "id": 31,
+      "ledger_id": 706,
+      "turn_number": 0,
+      "tool_name": "precheck_exact",
+      "tool_input": {
+        "amount": 66568.93,
+        "reference": "UTIB000000001023"
+      },
+      "tool_result": {
+        "method": "exact",
+        "matched": true,
+        "bank_db_id": 784,
+        "bank_txn_id": "TXN-00023"
+      },
+      "created_at": "2026-09-04T09:46:14.190Z"
+    },
+    {
+      "id": 32,
+      "ledger_id": 707,
+      "turn_number": 1,
+      "tool_name": "find_exact_candidates",
+      "tool_input": {
+        "amount": 60732.44,
+        "reference": "ICIC000000001069"
+      },
+      "tool_result": {
+        "candidates": [
+          {
+            "id": 788,
+            "amount": 60732.44,
+            "status": "settled",
+            "txn_id": "TXN-00069",
+            "utr_ref": "ICIC000000001069",
+            "txn_date": "2026-08-14",
+            "payer_name": "Oberoi Hotels Supply"
+          }
+        ]
+      },
+      "created_at": "2026-09-04T09:46:39.756Z"
+    },
+    {
+      "id": 33,
+      "ledger_id": 707,
+      "turn_number": 2,
+      "tool_name": "check_duplicate_ref",
+      "tool_input": {
+        "reference": "ICIC000000001069"
+      },
+      "tool_result": {
+        "count": 2,
+        "txn_ids": [
+          "TXN-00070",
+          "TXN-00069"
+        ],
+        "reference": "ICIC000000001069",
+        "is_duplicate": true
+      },
+      "created_at": "2026-09-04T09:47:08.238Z"
+    },
+    {
+      "id": 34,
+      "ledger_id": 707,
+      "turn_number": 3,
+      "tool_name": "flag_exception",
+      "tool_input": {
+        "reason": "duplicate_reference",
+        "reasoning": "The payment reference ICIC000000001069 was found in multiple bank transactions (TXN-00069 and TXN-00070). Due to the duplicate payment reference, this record cannot be automatically matched and requires human review.",
+        "best_candidate_id": "TXN-00069"
+      },
+      "tool_result": {
+        "status": "flagged"
+      },
+      "created_at": "2026-09-04T09:47:35.217Z"
+    },
+    {
+      "id": 35,
+      "ledger_id": 708,
+      "turn_number": 0,
+      "tool_name": "precheck_exact",
+      "tool_input": {
+        "amount": 174827.06,
+        "reference": "UPI/806935904/001059"
+      },
+      "tool_result": {
+        "method": "exact",
+        "matched": true,
+        "bank_db_id": 776,
+        "bank_txn_id": "TXN-00059"
+      },
+      "created_at": "2026-09-04T09:47:35.242Z"
+    },
+    {
+      "id": 36,
+      "ledger_id": 709,
+      "turn_number": 1,
+      "tool_name": "find_exact_candidates",
+      "tool_input": {
+        "amount": 27319.88,
+        "reference": "IOBA000000001063"
+      },
+      "tool_result": {
+        "candidates": []
+      },
+      "created_at": "2026-09-04T09:51:44.334Z"
+    },
+    {
+      "id": 37,
+      "ledger_id": 709,
+      "turn_number": 2,
+      "tool_name": "find_fuzzy_candidates",
+      "tool_input": {
+        "date": "2026-08-28",
+        "amount": 27319.88,
+        "customer_name": "Patel Fabrics & Textiles"
+      },
+      "tool_result": {
+        "candidates": []
+      },
+      "created_at": "2026-09-04T09:51:46.586Z"
+    },
+    {
+      "id": 38,
+      "ledger_id": 709,
+      "turn_number": 3,
+      "tool_name": "flag_exception",
+      "tool_input": {
+        "reason": "no_candidate",
+        "reasoning": "No matching bank transaction was found for payment reference IOBA000000001063, amount 27319.88, and invoice date 2026-08-28 in either exact or fuzzy candidate searches.",
+        "best_candidate_id": ""
+      },
+      "tool_result": {
+        "status": "flagged"
+      },
+      "created_at": "2026-09-04T09:52:05.578Z"
+    },
+    {
+      "id": 39,
+      "ledger_id": 710,
+      "turn_number": 0,
+      "tool_name": "precheck_exact",
+      "tool_input": {
+        "amount": 12056.17,
+        "reference": "HDFC000000001056"
+      },
+      "tool_result": {
+        "method": "exact",
+        "matched": true,
+        "bank_db_id": 801,
+        "bank_txn_id": "TXN-00056"
+      },
+      "created_at": "2026-09-04T09:52:05.608Z"
+    },
+    {
+      "id": 40,
+      "ledger_id": 711,
+      "turn_number": 1,
+      "tool_name": "find_exact_candidates",
+      "tool_input": {
+        "amount": 47760.85,
+        "reference": "IOBA000000001045"
+      },
+      "tool_result": {
+        "candidates": []
+      },
+      "created_at": "2026-09-04T09:52:20.549Z"
+    },
+    {
+      "id": 41,
+      "ledger_id": 711,
+      "turn_number": 1,
+      "tool_name": "find_exact_candidates",
+      "tool_input": {
+        "amount": 47760.85,
+        "reference": "IOBA000000001045"
+      },
+      "tool_result": {
+        "candidates": []
+      },
+      "created_at": "2026-09-04T09:52:59.223Z"
+    },
+    {
+      "id": 42,
+      "ledger_id": 711,
+      "turn_number": 2,
+      "tool_name": "find_fuzzy_candidates",
+      "tool_input": {
+        "date": "2026-08-30",
+        "amount": 47760.85,
+        "customer_name": "Birla Textiles Outlet"
+      },
+      "tool_result": {
+        "candidates": [
+          {
+            "id": 783,
+            "amount": 47762.85,
+            "status": "settled",
+            "txn_id": "TXN-00045",
+            "utr_ref": "IOBA000000001045",
+            "txn_date": "2026-08-30",
+            "payer_name": "Birla Textiles Outlet",
+            "amount_diff": "2.00",
+            "date_diff_days": 0
+          }
+        ]
+      },
+      "created_at": "2026-09-04T09:53:07.043Z"
+    },
+    {
+      "id": 43,
+      "ledger_id": 711,
+      "turn_number": 2,
+      "tool_name": "find_fuzzy_candidates",
+      "tool_input": {
+        "date": "2026-08-30",
+        "amount": 47760.85,
+        "customer_name": "Birla Textiles Outlet"
+      },
+      "tool_result": {
+        "candidates": [
+          {
+            "id": 783,
+            "amount": 47762.85,
+            "status": "settled",
+            "txn_id": "TXN-00045",
+            "utr_ref": "IOBA000000001045",
+            "txn_date": "2026-08-30",
+            "payer_name": "Birla Textiles Outlet",
+            "amount_diff": "2.00",
+            "date_diff_days": 0
+          }
+        ]
+      },
+      "created_at": "2026-09-04T09:53:19.881Z"
+    },
+    {
+      "id": 44,
+      "ledger_id": 711,
+      "turn_number": 3,
+      "tool_name": "check_duplicate_ref",
+      "tool_input": {
+        "reference": "IOBA000000001045"
+      },
+      "tool_result": {
+        "count": 1,
+        "txn_ids": [
+          "TXN-00045"
+        ],
+        "reference": "IOBA000000001045",
+        "is_duplicate": false
+      },
+      "created_at": "2026-09-04T09:53:41.950Z"
+    },
+    {
+      "id": 45,
+      "ledger_id": 711,
+      "turn_number": 3,
+      "tool_name": "check_duplicate_ref",
+      "tool_input": {
+        "reference": "IOBA000000001045"
+      },
+      "tool_result": {
+        "count": 1,
+        "txn_ids": [
+          "TXN-00045"
+        ],
+        "reference": "IOBA000000001045",
+        "is_duplicate": false
+      },
+      "created_at": "2026-09-04T09:53:41.954Z"
+    },
+    {
+      "id": 46,
+      "ledger_id": 711,
+      "turn_number": 4,
+      "tool_name": "flag_exception",
+      "tool_input": {
+        "reason": "unexplained_discrepancy",
+        "reasoning": "The bank transaction (TXN-00045) matches on payment reference (IOBA000000001045), transaction date (2026-08-30), and payer name (Birla Textiles Outlet). However, the bank amount of 47762.85 exceeds the ledger amount of 47760.85 by 2.00, which is beyond acceptable rounding tolerance and lacks an explanation. Escalating for human review.",
+        "best_candidate_id": "TXN-00045"
+      },
+      "tool_result": {
+        "status": "flagged"
+      },
+      "created_at": "2026-09-04T09:54:02.386Z"
+    },
+    {
+      "id": 47,
+      "ledger_id": 712,
+      "turn_number": 0,
+      "tool_name": "precheck_exact",
+      "tool_input": {
+        "amount": 13591.16,
+        "reference": "CNRB000000001015"
+      },
+      "tool_result": {
+        "method": "exact",
+        "matched": true,
+        "bank_db_id": 775,
+        "bank_txn_id": "TXN-00015"
+      },
+      "created_at": "2026-09-04T09:54:02.414Z"
+    },
+    {
+      "id": 48,
+      "ledger_id": 711,
+      "turn_number": 4,
+      "tool_name": "flag_exception",
+      "tool_input": {
+        "reason": "unexplained_discrepancy",
+        "reasoning": "The UTR reference (IOBA000000001045), payer name (Birla Textiles Outlet), and transaction date (2026-08-30) match the ledger record, but there is an unexplained $2.00 amount discrepancy between the ledger (47,760.85) and the bank transaction (47,762.85), exceeding standard rounding tolerance.",
+        "best_candidate_id": "TXN-00045"
+      },
+      "tool_result": {
+        "status": "flagged"
+      },
+      "created_at": "2026-09-04T09:54:13.897Z"
+    },
+    {
+      "id": 49,
+      "ledger_id": 712,
+      "turn_number": 0,
+      "tool_name": "precheck_exact",
+      "tool_input": {
+        "amount": 13591.16,
+        "reference": "CNRB000000001015"
+      },
+      "tool_result": {
+        "method": "exact",
+        "matched": true,
+        "bank_db_id": 775,
+        "bank_txn_id": "TXN-00015"
+      },
+      "created_at": "2026-09-04T09:54:13.939Z"
+    },
+    {
+      "id": 50,
+      "ledger_id": 713,
+      "turn_number": 0,
+      "tool_name": "precheck_exact",
+      "tool_input": {
+        "amount": 186813.25,
+        "reference": "UPI/656869759/001021"
+      },
+      "tool_result": {
+        "method": "exact",
+        "matched": true,
+        "bank_db_id": 782,
+        "bank_txn_id": "TXN-00021"
+      },
+      "created_at": "2026-09-04T09:54:13.953Z"
+    },
+    {
+      "id": 51,
+      "ledger_id": 714,
+      "turn_number": 0,
+      "tool_name": "precheck_exact",
+      "tool_input": {
+        "amount": 41064.65,
+        "reference": "SBIN000000001014"
+      },
+      "tool_result": {
+        "method": "exact",
+        "matched": true,
+        "bank_db_id": 752,
+        "bank_txn_id": "TXN-00014"
+      },
+      "created_at": "2026-09-04T09:54:13.968Z"
+    },
+    {
+      "id": 52,
+      "ledger_id": 715,
+      "turn_number": 0,
+      "tool_name": "precheck_exact",
+      "tool_input": {
+        "amount": 5011.76,
+        "reference": "BARB000000001055"
+      },
+      "tool_result": {
+        "method": "exact",
+        "matched": true,
+        "bank_db_id": 792,
+        "bank_txn_id": "TXN-00055"
+      },
+      "created_at": "2026-09-04T09:54:13.980Z"
+    },
+    {
+      "id": 53,
+      "ledger_id": 716,
+      "turn_number": 1,
+      "tool_name": "find_exact_candidates",
+      "tool_input": {
+        "amount": 32036.72,
+        "reference": "UPI/740756401/001064"
+      },
+      "tool_result": {
+        "candidates": []
+      },
+      "created_at": "2026-09-04T09:54:31.737Z"
+    },
+    {
+      "id": 54,
+      "ledger_id": 716,
+      "turn_number": 2,
+      "tool_name": "find_fuzzy_candidates",
+      "tool_input": {
+        "date": "2026-08-02",
+        "amount": 32036.72,
+        "customer_name": "Khan Textile Mills"
+      },
+      "tool_result": {
+        "candidates": []
+      },
+      "created_at": "2026-09-04T09:54:54.143Z"
+    },
+    {
+      "id": 55,
+      "ledger_id": 716,
+      "turn_number": 3,
+      "tool_name": "flag_exception",
+      "tool_input": {
+        "reason": "no_candidate",
+        "reasoning": "No bank transaction matching reference UPI/740756401/001064 or amount 32036.72 near date 2026-08-02 was found in the bank records.",
+        "best_candidate_id": ""
+      },
+      "tool_result": {
+        "status": "flagged"
+      },
+      "created_at": "2026-09-04T09:55:17.636Z"
+    },
+    {
+      "id": 56,
+      "ledger_id": 717,
+      "turn_number": 0,
+      "tool_name": "precheck_exact",
+      "tool_input": {
+        "amount": 11024.95,
+        "reference": "UPI/347936215/001011"
+      },
+      "tool_result": {
+        "method": "exact",
+        "matched": true,
+        "bank_db_id": 810,
+        "bank_txn_id": "TXN-00011"
+      },
+      "created_at": "2026-09-04T09:55:17.663Z"
+    },
+    {
+      "id": 57,
+      "ledger_id": 718,
+      "turn_number": 0,
+      "tool_name": "precheck_exact",
+      "tool_input": {
+        "amount": 64317.05,
+        "reference": "HDFC000000001005"
+      },
+      "tool_result": {
+        "method": "exact",
+        "matched": true,
+        "bank_db_id": 798,
+        "bank_txn_id": "TXN-00005"
+      },
+      "created_at": "2026-09-04T09:55:17.669Z"
+    }
+  ]
+}
