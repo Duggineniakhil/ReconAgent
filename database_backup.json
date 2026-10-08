@@ -1312,15 +1312,6 @@
       "created_at": "2026-09-04T09:54:02.410Z"
     },
     {
-      "id": 14,
-      "ledger_id": 712,
-      "bank_txn_id": 775,
-      "method": "exact",
-      "confidence": "1.000",
-      "reasoning": "Precheck: exact match on reference CNRB000000001015 and amount 13591.16. Single unique reference, no ambiguity.",
-      "created_at": "2026-09-04T09:54:13.934Z"
-    },
-    {
       "id": 15,
       "ledger_id": 713,
       "bank_txn_id": 782,
@@ -1369,7 +1360,7 @@
       "id": 20,
       "ledger_id": 711,
       "bank_txn_id": 783,
-      "method": "reasoned",
+      "method": "manual",
       "confidence": "1.000",
       "reasoning": "Manually resolved by user",
       "created_at": "2026-09-04T10:29:29.139Z"
@@ -1405,16 +1396,6 @@
       "status": "open",
       "resolved_by": null,
       "created_at": "2026-09-04T09:52:05.589Z"
-    },
-    {
-      "id": 6,
-      "ledger_id": 711,
-      "reason": "unexplained_discrepancy",
-      "best_candidate_bank_txn_id": 783,
-      "reasoning": "The bank transaction (TXN-00045) matches on payment reference (IOBA000000001045), transaction date (2026-08-30), and payer name (Birla Textiles Outlet). However, the bank amount of 47762.85 exceeds the ledger amount of 47760.85 by 2.00, which is beyond acceptable rounding tolerance and lacks an explanation. Escalating for human review.",
-      "status": "open",
-      "resolved_by": null,
-      "created_at": "2026-09-04T09:54:02.402Z"
     },
     {
       "id": 8,

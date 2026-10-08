@@ -2,21 +2,33 @@ import { Router, Request, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
 import { ingestData } from '../services/ingest';
-import { query } from '../db';
+import { query, withTransaction } from '../db';
 import { reconcileRecord } from '../agent';
+import { evaluate, type GroundTruthEntry } from '../services/metrics';
 
 export const apiRouter = Router();
+
+// Ingest and reconcile both rewrite outcome tables; letting two of them overlap
+// is how records used to end up matched twice. Only one may run at a time.
+let busy: 'ingest' | 'reconcile' | null = null;
 
 /**
  * POST /api/ingest
  * Triggers the ingestData() utility.
  */
 apiRouter.post('/ingest', async (req: Request, res: Response) => {
+  if (busy) {
+    res.status(409).json({ error: `A ${busy} run is already in progress` });
+    return;
+  }
+  busy = 'ingest';
   try {
     const counts = await ingestData();
     res.json({ success: true, counts });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
+  } finally {
+    busy = null;
   }
 });
 
@@ -25,6 +37,11 @@ apiRouter.post('/ingest', async (req: Request, res: Response) => {
  * Triggers the agent loop for all unreconciled records, updating progress.
  */
 apiRouter.post('/reconcile', async (req: Request, res: Response) => {
+  if (busy) {
+    res.status(409).json({ error: `A ${busy} run is already in progress` });
+    return;
+  }
+  busy = 'reconcile';
   try {
     const unreconciled = await query<{ id: number }>(`
       SELECT l.id
@@ -57,6 +74,8 @@ apiRouter.post('/reconcile', async (req: Request, res: Response) => {
     res.json({ success: true, processed, errors });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
+  } finally {
+    busy = null;
   }
 });
 
@@ -130,39 +149,49 @@ apiRouter.post('/exceptions/:id/resolve', async (req: Request, res: Response) =>
     const { id } = req.params;
     const { action, bank_txn_id } = req.body; // action: 'match' | 'reject'
 
-    const excResult = await query<{ ledger_id: number, status: string }>(`SELECT * FROM exceptions WHERE id = $1`, [id]);
-    if (!excResult.rows.length) {
-      res.status(404).json({ error: 'Exception not found' });
-      return;
-    }
-    
-    const exc = excResult.rows[0];
-    if (exc.status !== 'open') {
-      res.status(400).json({ error: 'Exception is already resolved' });
+    if (action !== 'match' && action !== 'reject') {
+      res.status(400).json({ error: 'Invalid action, use "match" or "reject"' });
       return;
     }
 
-    if (action === 'match') {
-      const bankResult = await query<{ id: number }>(`SELECT id FROM bank_transactions WHERE txn_id = $1`, [bank_txn_id]);
-      const bankId = bankResult.rows[0]?.id;
-      if (!bankId) {
-        res.status(400).json({ error: 'Invalid bank_txn_id' });
-        return;
+    const outcome = await withTransaction(async (client) => {
+      // Lock the exception row so two reviewers can't resolve it at once
+      const excResult = await client.query<{ ledger_id: number; status: string }>(
+        `SELECT ledger_id, status FROM exceptions WHERE id = $1 FOR UPDATE`, [id],
+      );
+      const exc = excResult.rows[0];
+      if (!exc) return { status: 404, error: 'Exception not found' };
+      if (exc.status !== 'open') return { status: 400, error: 'Exception is already resolved' };
+
+      if (action === 'reject') {
+        await client.query(`UPDATE exceptions SET status = 'rejected', resolved_by = 'human' WHERE id = $1`, [id]);
+        return { message: 'Exception rejected / written off' };
       }
-      
-      // Use 'reasoned' method for manual matches, as method must be exact/fuzzy/reasoned
-      await query(`
-        INSERT INTO matches (ledger_id, bank_txn_id, method, confidence, reasoning)
-        VALUES ($1, $2, 'reasoned', 1.0, 'Manually resolved by user')
-      `, [exc.ledger_id, bankId]);
-      
-      await query(`UPDATE exceptions SET status = 'approved', resolved_by = 'human' WHERE id = $1`, [id]);
-      res.json({ success: true, message: 'Resolved as match' });
-    } else if (action === 'reject') {
-      await query(`UPDATE exceptions SET status = 'rejected', resolved_by = 'human' WHERE id = $1`, [id]);
-      res.json({ success: true, message: 'Exception rejected / written off' });
+
+      const bankResult = await client.query<{ id: number; matched_to: string | null }>(
+        `SELECT b.id,
+                (SELECT l.invoice_id FROM matches m JOIN ledger_records l ON l.id = m.ledger_id
+                  WHERE m.bank_txn_id = b.id) AS matched_to
+         FROM bank_transactions b WHERE b.txn_id = $1`,
+        [bank_txn_id],
+      );
+      const bank = bankResult.rows[0];
+      if (!bank) return { status: 400, error: 'Invalid bank_txn_id' };
+      if (bank.matched_to) return { status: 409, error: `${bank_txn_id} is already matched to ${bank.matched_to}` };
+
+      await client.query(
+        `INSERT INTO matches (ledger_id, bank_txn_id, method, confidence, reasoning)
+         VALUES ($1, $2, 'manual', 1.0, 'Manually resolved by user')`,
+        [exc.ledger_id, bank.id],
+      );
+      await client.query(`UPDATE exceptions SET status = 'approved', resolved_by = 'human' WHERE id = $1`, [id]);
+      return { message: 'Resolved as match' };
+    });
+
+    if ('error' in outcome) {
+      res.status(outcome.status!).json({ error: outcome.error });
     } else {
-      res.status(400).json({ error: 'Invalid action, use "match" or "reject"' });
+      res.json({ success: true, message: outcome.message });
     }
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -190,85 +219,47 @@ apiRouter.get('/audit-log/:ledgerId', async (req: Request, res: Response) => {
 
 /**
  * GET /api/metrics
- * Placeholder for precision/recall metrics. 
- * Actually computes precision/recall if ground truth exists, but for now we can just return basic stats.
+ * Record counts, plus precision / recall / accuracy of the agent's own
+ * decisions against data/ground_truth.json when it exists.
  */
 apiRouter.get('/metrics', async (req: Request, res: Response) => {
   try {
     const stats = await query(`
-      SELECT 
+      SELECT
         (SELECT COUNT(*) FROM ledger_records) as total_records,
         (SELECT COUNT(*) FROM matches) as total_matches,
-        (SELECT COUNT(*) FROM exceptions) as total_exceptions
+        (SELECT COUNT(*) FROM exceptions) as total_exceptions,
+        (SELECT COUNT(*) FROM exceptions WHERE status = 'open') as open_exceptions,
+        (SELECT COUNT(*) FROM exceptions WHERE status = 'rejected') as rejected_exceptions
     `);
 
-    // Calculate Precision and Recall
     const gtPath = path.resolve(__dirname, '../../data/ground_truth.json');
-    let precision = 0;
-    let recall = 0;
-    let accuracy = 0;
-    
-    if (fs.existsSync(gtPath)) {
-      const groundTruth: { ledger_invoice_id: string, expected_bank_txn_id: string | null }[] = JSON.parse(fs.readFileSync(gtPath, 'utf-8'));
-      
-      const matches = await query(`
-        SELECT l.invoice_id, b.txn_id as bank_txn_id 
-        FROM matches m 
-        JOIN ledger_records l ON m.ledger_id = l.id 
-        JOIN bank_transactions b ON m.bank_txn_id = b.id
-      `);
-      
-      const exceptions = await query(`
-        SELECT l.invoice_id 
-        FROM exceptions e 
-        JOIN ledger_records l ON e.ledger_id = l.id
-      `);
-
-      const matchMap = new Map(matches.rows.map((r: any) => [r.invoice_id, r.bank_txn_id]));
-      const exceptionSet = new Set(exceptions.rows.map((r: any) => r.invoice_id));
-
-      let TP = 0, FP = 0, FN = 0, TN = 0;
-
-      for (const gt of groundTruth) {
-        const agentMatchedId = matchMap.get(gt.ledger_invoice_id);
-        const agentFlagged = exceptionSet.has(gt.ledger_invoice_id);
-
-        if (gt.expected_bank_txn_id !== null) {
-          // Expected a match
-          if (agentMatchedId === gt.expected_bank_txn_id) {
-            TP++;
-          } else if (agentMatchedId) {
-            // Matched to the wrong one
-            FP++;
-            FN++; // Also missed the correct one
-          } else if (agentFlagged) {
-            // Should have matched, but flagged as exception
-            FN++;
-          }
-        } else {
-          // Expected an exception
-          if (agentFlagged) {
-            TN++;
-          } else if (agentMatchedId) {
-            FP++;
-          }
-        }
-      }
-
-      precision = (TP + FP) > 0 ? (TP / (TP + FP)) : 0;
-      recall = (TP + FN) > 0 ? (TP / (TP + FN)) : 0;
-      accuracy = (TP + TN + FP + FN) > 0 ? ((TP + TN) / (TP + TN + FP + FN)) : 0;
-      
-      res.json({
-        ...stats.rows[0],
-        precision,
-        recall,
-        accuracy,
-        confusion_matrix: { TP, FP, FN, TN }
-      });
-    } else {
+    if (!fs.existsSync(gtPath)) {
       res.json(stats.rows[0]);
+      return;
     }
+    const groundTruth: GroundTruthEntry[] = JSON.parse(fs.readFileSync(gtPath, 'utf-8'));
+
+    // The agent's decision per invoice: its match (manual matches excluded,
+    // those are human decisions) or null where it flagged an exception.
+    const decisions = await query<{ invoice_id: string; bank_txn_id: string | null }>(`
+      SELECT l.invoice_id, b.txn_id AS bank_txn_id
+      FROM matches m
+      JOIN ledger_records l ON m.ledger_id = l.id
+      JOIN bank_transactions b ON m.bank_txn_id = b.id
+      WHERE m.method <> 'manual'
+      UNION ALL
+      SELECT l.invoice_id, NULL
+      FROM exceptions e
+      JOIN ledger_records l ON e.ledger_id = l.id
+    `);
+
+    const evaluation = evaluate(
+      groundTruth,
+      new Map(decisions.rows.map((r) => [r.invoice_id, r.bank_txn_id])),
+    );
+
+    res.json({ ...stats.rows[0], ...evaluation });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

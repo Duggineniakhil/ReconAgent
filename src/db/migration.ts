@@ -39,9 +39,9 @@ export async function runMigration(): Promise<void> {
   await query(`
     CREATE TABLE IF NOT EXISTS matches (
       id          SERIAL        PRIMARY KEY,
-      ledger_id   INT           REFERENCES ledger_records(id),
-      bank_txn_id INT           REFERENCES bank_transactions(id),
-      method      TEXT          CHECK (method IN ('exact','fuzzy','reasoned')),
+      ledger_id   INT           NOT NULL UNIQUE REFERENCES ledger_records(id),
+      bank_txn_id INT           NOT NULL UNIQUE REFERENCES bank_transactions(id),
+      method      TEXT          CHECK (method IN ('exact','fuzzy','reasoned','manual')),
       confidence  NUMERIC(4,3)  NOT NULL,
       reasoning   TEXT          NOT NULL,
       created_at  TIMESTAMP     DEFAULT now()
@@ -53,7 +53,7 @@ export async function runMigration(): Promise<void> {
   await query(`
     CREATE TABLE IF NOT EXISTS exceptions (
       id                        SERIAL    PRIMARY KEY,
-      ledger_id                 INT       REFERENCES ledger_records(id),
+      ledger_id                 INT       NOT NULL UNIQUE REFERENCES ledger_records(id),
       reason                    TEXT      CHECK (reason IN (
                                             'no_candidate',
                                             'ambiguous_candidates',
@@ -83,6 +83,31 @@ export async function runMigration(): Promise<void> {
     );
   `);
   console.log('[Migration] ✔ audit_log');
+
+  // ── Upgrades for databases created before these constraints existed ──
+  // One outcome per ledger record; a bank transaction can only be claimed once.
+  // Older versions could double-write outcomes when two runs overlapped, so
+  // drop duplicates first: keep the earliest match, and the resolved exception.
+  await query(`DELETE FROM matches a USING matches b WHERE a.ledger_id = b.ledger_id AND a.id > b.id`);
+  await query(`DELETE FROM matches a USING matches b WHERE a.bank_txn_id = b.bank_txn_id AND a.id > b.id`);
+  await query(`
+    DELETE FROM exceptions WHERE id IN (
+      SELECT id FROM (
+        SELECT id, ROW_NUMBER() OVER (PARTITION BY ledger_id ORDER BY (status <> 'open') DESC, id) AS rn
+        FROM exceptions
+      ) ranked WHERE rn > 1
+    )
+  `);
+  await query(`CREATE UNIQUE INDEX IF NOT EXISTS matches_ledger_id_key ON matches (ledger_id)`);
+  await query(`CREATE UNIQUE INDEX IF NOT EXISTS matches_bank_txn_id_key ON matches (bank_txn_id)`);
+  await query(`CREATE UNIQUE INDEX IF NOT EXISTS exceptions_ledger_id_key ON exceptions (ledger_id)`);
+  await query(`ALTER TABLE matches ALTER COLUMN ledger_id SET NOT NULL, ALTER COLUMN bank_txn_id SET NOT NULL`);
+  await query(`ALTER TABLE exceptions ALTER COLUMN ledger_id SET NOT NULL`);
+  // Human-approved matches are recorded as 'manual'
+  await query(`ALTER TABLE matches DROP CONSTRAINT IF EXISTS matches_method_check`);
+  await query(`UPDATE matches SET method = 'manual' WHERE reasoning = 'Manually resolved by user'`);
+  await query(`ALTER TABLE matches ADD CONSTRAINT matches_method_check CHECK (method IN ('exact','fuzzy','reasoned','manual'))`);
+  console.log('[Migration] ✔ constraints');
 
   console.log('[Migration] Schema migration complete — all 5 tables ready.');
 }

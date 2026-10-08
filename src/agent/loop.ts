@@ -6,10 +6,10 @@
  *
  * Implements:
  *   - Exact-match precheck (skips LLM for trivial cases)
- *   - Gemini chat with function calling
+ *   - Gemini function calling with a hard budget of investigative tool calls
  *   - audit_log write on every tool call
- *   - 6-turn hard stop
- *   - commit_match / flag_exception terminal handling
+ *   - commit_match / flag_exception terminal handling, re-checked by
+ *     server-side guardrails and written atomically
  */
 
 import {
@@ -19,7 +19,8 @@ import {
   type FunctionCall,
   type Part,
 } from '@google/generative-ai';
-import { query } from '../db';
+import type { PoolClient } from 'pg';
+import { query, withTransaction } from '../db';
 import {
   findExactCandidates,
   findFuzzyCandidates,
@@ -28,6 +29,7 @@ import {
 } from '../tools';
 import { SYSTEM_PROMPT } from './system_prompt';
 import { FUNCTION_DECLARATIONS } from './tool_schemas';
+import { checkCommit, type CommitTarget, type ExceptionReason } from './guardrails';
 
 // ═══════════════════════════════════════════════════════════════════════
 //  TYPES
@@ -68,7 +70,10 @@ interface LedgerRow {
 //  CONSTANTS
 // ═══════════════════════════════════════════════════════════════════════
 
-const MAX_TURNS = 6;
+/** Investigative (non-terminal) tool calls allowed per record. */
+const MAX_TOOL_CALLS = 6;
+/** Model round-trips allowed; leaves room to reach a terminal call after the budget runs out. */
+const MAX_MODEL_TURNS = MAX_TOOL_CALLS + 2;
 const MODEL_NAME = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -101,16 +106,17 @@ async function writeAuditLog(
   toolName: string,
   toolInput: Record<string, unknown>,
   toolResult: unknown,
+  client?: PoolClient,
 ): Promise<void> {
-  await query(
-    `INSERT INTO audit_log (ledger_id, turn_number, tool_name, tool_input, tool_result)
-     VALUES ($1, $2, $3, $4, $5)`,
-    [ledgerId, turnNumber, toolName, JSON.stringify(toolInput), JSON.stringify(toolResult)],
-  );
+  const sql = `INSERT INTO audit_log (ledger_id, turn_number, tool_name, tool_input, tool_result)
+               VALUES ($1, $2, $3, $4, $5)`;
+  const params = [ledgerId, turnNumber, toolName, JSON.stringify(toolInput), JSON.stringify(toolResult)];
+  if (client) await client.query(sql, params);
+  else await query(sql, params);
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-//  TOOL EXECUTION
+//  TOOL EXECUTION  (investigative tools only)
 // ═══════════════════════════════════════════════════════════════════════
 
 async function executeTool(
@@ -144,71 +150,136 @@ async function executeTool(
     case 'check_duplicate_ref':
       return checkDuplicateRef(toolInput.reference as string) as unknown as Record<string, unknown>;
 
-    // Terminal tools: return confirmation (DB writes happen in the loop)
-    case 'commit_match':
-      return { status: 'committed' };
-
-    case 'flag_exception':
-      return { status: 'flagged' };
-
     default:
       return { error: `Unknown tool: ${toolName}` };
   }
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-//  TERMINAL TOOL HANDLERS
+//  TERMINAL HANDLERS  (each runs in a single transaction)
 // ═══════════════════════════════════════════════════════════════════════
 
-async function executeCommitMatch(
-  ledgerId: number,
-  input: Record<string, unknown>,
-): Promise<boolean> {
-  const confidence = Number(input.confidence) || 0;
-  
-  if (confidence < 0.85) {
-    // Server-side guardrail: Override the model's attempt to match and flag it as an exception.
-    await executeFlagException(ledgerId, {
-      reason: 'unexplained_discrepancy',
-      reasoning: `Model attempted to commit match with confidence ${confidence}, which is below the strict 0.85 threshold. Original reasoning: ${input.reasoning}`,
-      best_candidate_id: input.bank_txn_id
-    });
-    return false;
-  }
-
-  const bankResult = await query<{ id: number }>(
-    `SELECT id FROM bank_transactions WHERE txn_id = $1`,
-    [input.bank_txn_id],
+async function loadCommitTarget(
+  client: PoolClient,
+  txnId: string,
+): Promise<(CommitTarget & { id: number }) | null> {
+  const result = await client.query<CommitTarget & { id: number }>(
+    `SELECT b.id, b.txn_id, b.utr_ref, b.amount::float AS amount,
+            (SELECT COUNT(*)::int FROM bank_transactions d WHERE d.utr_ref = b.utr_ref) AS ref_count,
+            (SELECT l.invoice_id FROM matches m JOIN ledger_records l ON l.id = m.ledger_id
+              WHERE m.bank_txn_id = b.id) AS matched_to
+     FROM   bank_transactions b
+     WHERE  b.txn_id = $1`,
+    [txnId],
   );
-  const bankId = bankResult.rows[0]?.id ?? null;
-
-  await query(
-    `INSERT INTO matches (ledger_id, bank_txn_id, method, confidence, reasoning)
-     VALUES ($1, $2, $3, $4, $5)`,
-    [ledgerId, bankId, input.method, confidence, input.reasoning],
-  );
-  return true;
+  return result.rows[0] ?? null;
 }
 
-async function executeFlagException(
+async function insertException(
+  client: PoolClient,
   ledgerId: number,
-  input: Record<string, unknown>,
+  reason: ExceptionReason,
+  reasoning: string,
+  bestCandidateTxnId: string | null,
 ): Promise<void> {
   let bestCandidateId: number | null = null;
-  const candidateStr = input.best_candidate_id as string | undefined;
-  if (candidateStr && candidateStr !== '' && candidateStr !== 'null') {
-    const bankResult = await query<{ id: number }>(
+  if (bestCandidateTxnId) {
+    const bank = await client.query<{ id: number }>(
       `SELECT id FROM bank_transactions WHERE txn_id = $1`,
-      [candidateStr],
+      [bestCandidateTxnId],
     );
-    bestCandidateId = bankResult.rows[0]?.id ?? null;
+    bestCandidateId = bank.rows[0]?.id ?? null;
   }
-
-  await query(
+  await client.query(
     `INSERT INTO exceptions (ledger_id, reason, best_candidate_bank_txn_id, reasoning)
      VALUES ($1, $2, $3, $4)`,
-    [ledgerId, input.reason, bestCandidateId, input.reasoning],
+    [ledgerId, reason, bestCandidateId, reasoning],
   );
+}
+
+/** commit_match: re-check against the DB, then write a match or (if a guardrail trips) an exception. */
+async function handleCommitMatch(
+  ledger: LedgerRow,
+  turn: number,
+  input: Record<string, unknown>,
+  trace: ToolCallTrace[],
+): Promise<ReconciliationResult> {
+  const txnId = String(input.bank_txn_id ?? '');
+  const confidence = Number(input.confidence) || 0;
+  const base = { ledger_id: ledger.id, invoice_id: ledger.invoice_id, trace, turns: turn, precheck: false };
+
+  return withTransaction(async (client) => {
+    const target = await loadCommitTarget(client, txnId);
+    const check = checkCommit(ledger.amount, confidence, target, txnId);
+
+    const result = { status: check.ok ? 'committed' : 'rejected_by_guardrail' };
+    await writeAuditLog(ledger.id, turn, 'commit_match', input, result, client);
+    trace.push({ turn, tool_name: 'commit_match', tool_input: input, tool_result: result });
+
+    if (check.ok) {
+      await client.query(
+        `INSERT INTO matches (ledger_id, bank_txn_id, method, confidence, reasoning)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [ledger.id, target!.id, input.method, confidence, input.reasoning],
+      );
+      return {
+        ...base,
+        outcome: 'matched' as const,
+        method: input.method as string,
+        confidence,
+        reasoning: input.reasoning as string,
+        matched_bank_txn_id: txnId,
+      };
+    }
+
+    const reasoning = `Guardrail blocked the agent's match to ${txnId}: ${check.message} Agent reasoning: ${input.reasoning}`;
+    const overrideInput = { bank_txn_id: txnId, reason: check.reason, message: check.message };
+    await writeAuditLog(ledger.id, turn, 'guardrail_override', overrideInput, { flagged: true }, client);
+    trace.push({ turn, tool_name: 'guardrail_override', tool_input: overrideInput, tool_result: { flagged: true } });
+    await insertException(client, ledger.id, check.reason, reasoning, target ? txnId : null);
+
+    return {
+      ...base,
+      outcome: 'exception' as const,
+      exception_reason: check.reason,
+      reasoning,
+      best_candidate_id: target ? txnId : null,
+    };
+  });
+}
+
+/** Write an exception (from flag_exception, a text-only reply, or the hard stop). */
+async function handleException(
+  ledger: LedgerRow,
+  turn: number,
+  toolName: string,
+  input: Record<string, unknown>,
+  trace: ToolCallTrace[],
+  outcome: 'exception' | 'timeout' = 'exception',
+): Promise<ReconciliationResult> {
+  const reason = input.reason as ExceptionReason;
+  const reasoning = String(input.reasoning ?? '');
+  const candidate = input.best_candidate_id as string | undefined;
+  const bestCandidate = candidate && candidate !== 'null' ? candidate : null;
+
+  await withTransaction(async (client) => {
+    const result = { status: 'flagged' };
+    await writeAuditLog(ledger.id, turn, toolName, input, result, client);
+    trace.push({ turn, tool_name: toolName, tool_input: input, tool_result: result });
+    await insertException(client, ledger.id, reason, reasoning, bestCandidate);
+  });
+
+  return {
+    ledger_id: ledger.id,
+    invoice_id: ledger.invoice_id,
+    outcome,
+    exception_reason: reason,
+    reasoning,
+    best_candidate_id: bestCandidate,
+    trace,
+    turns: turn,
+    precheck: false,
+  };
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -218,31 +289,26 @@ async function executeFlagException(
 async function tryPrecheck(
   ledger: LedgerRow,
 ): Promise<ReconciliationResult | null> {
-  // Find all bank txns with this reference
-  const refResult = await query<{ id: number; txn_id: string; amount: number }>(
-    `SELECT id, txn_id, amount::float AS amount
-     FROM   bank_transactions
-     WHERE  utr_ref = $1`,
+  // Find all bank txns with this reference that aren't already matched
+  const refResult = await query<{ id: number; txn_id: string; amount: number; matched: boolean }>(
+    `SELECT b.id, b.txn_id, b.amount::float AS amount,
+            EXISTS (SELECT 1 FROM matches m WHERE m.bank_txn_id = b.id) AS matched
+     FROM   bank_transactions b
+     WHERE  b.utr_ref = $1`,
     [ledger.payment_ref],
   );
 
-  // Must be exactly 1 row with that reference (no duplicates)
+  // Must be exactly 1 row with that reference (no duplicates), still unclaimed
   if (refResult.rows.length !== 1) return null;
 
   const bankTxn = refResult.rows[0];
+  if (bankTxn.matched) return null;
 
   // Amount must match exactly
   if (Number(bankTxn.amount) !== ledger.amount) return null;
 
   // Clean trivial match — commit directly, no LLM needed
   const reasoning = `Precheck: exact match on reference ${ledger.payment_ref} and amount ${ledger.amount}. Single unique reference, no ambiguity.`;
-
-  await query(
-    `INSERT INTO matches (ledger_id, bank_txn_id, method, confidence, reasoning)
-     VALUES ($1, $2, 'exact', 1.000, $3)`,
-    [ledger.id, bankTxn.id, reasoning],
-  );
-
   const auditInput = { reference: ledger.payment_ref, amount: ledger.amount };
   const auditResult = {
     matched: true,
@@ -250,7 +316,15 @@ async function tryPrecheck(
     bank_db_id: bankTxn.id,
     method: 'exact',
   };
-  await writeAuditLog(ledger.id, 0, 'precheck_exact', auditInput, auditResult);
+
+  await withTransaction(async (client) => {
+    await client.query(
+      `INSERT INTO matches (ledger_id, bank_txn_id, method, confidence, reasoning)
+       VALUES ($1, $2, 'exact', 1.000, $3)`,
+      [ledger.id, bankTxn.id, reasoning],
+    );
+    await writeAuditLog(ledger.id, 0, 'precheck_exact', auditInput, auditResult, client);
+  });
 
   return {
     ledger_id: ledger.id,
@@ -289,20 +363,26 @@ function extractFunctionCalls(parts: Part[]): FunctionCall[] {
  *
  * 1. Try the precheck (trivial exact match → skip LLM)
  * 2. If precheck fails, run the Gemini agent loop
- * 3. Hard-stop at 6 turns
+ * 3. Stop investigating after MAX_TOOL_CALLS tool calls
  */
 export async function reconcileRecord(
   ledgerId: number,
 ): Promise<ReconciliationResult> {
   // ── Fetch ledger record ─────────────────────────────────────────────
-  const ledgerResult = await query<LedgerRow>(
-    `SELECT id, invoice_id, customer_name, amount::float AS amount,
-            invoice_date::text AS invoice_date, payment_ref
-     FROM   ledger_records WHERE id = $1`,
+  const ledgerResult = await query<LedgerRow & { reconciled: boolean }>(
+    `SELECT l.id, l.invoice_id, l.customer_name, l.amount::float AS amount,
+            l.invoice_date::text AS invoice_date, l.payment_ref,
+            EXISTS (SELECT 1 FROM matches m WHERE m.ledger_id = l.id)
+              OR EXISTS (SELECT 1 FROM exceptions e WHERE e.ledger_id = l.id) AS reconciled
+     FROM   ledger_records l WHERE l.id = $1`,
     [ledgerId],
   );
   const ledger = ledgerResult.rows[0];
   if (!ledger) throw new Error(`Ledger record id=${ledgerId} not found`);
+  if (ledger.reconciled) throw new Error(`Ledger record id=${ledgerId} is already reconciled`);
+
+  // Clear audit rows left behind by an interrupted earlier attempt
+  await query(`DELETE FROM audit_log WHERE ledger_id = $1`, [ledgerId]);
 
   // ── Precheck ────────────────────────────────────────────────────────
   const precheckResult = await tryPrecheck(ledger);
@@ -322,147 +402,62 @@ export async function reconcileRecord(
     `Payment Reference: ${ledger.payment_ref}`,
   ].join('\n');
 
-  let turnCount = 0;
-
   const contents: Content[] = [
     { role: 'user', parts: [{ text: userMessage }] }
   ];
 
-  // Send initial message
-  let response = await model.generateContent({ contents });
-  let parts = response.response.candidates?.[0]?.content?.parts ?? [];
-  contents.push({ role: 'model', parts });
+  let toolCalls = 0;
+  let turn = 0;
 
-  let functionCalls = extractFunctionCalls(parts);
+  while (turn < MAX_MODEL_TURNS) {
+    turn++;
 
-  while (turnCount < MAX_TURNS) {
-    turnCount++;
+    const response = await model.generateContent({ contents });
+    const parts = response.response.candidates?.[0]?.content?.parts ?? [];
+    contents.push({ role: 'model', parts });
+
+    const functionCalls = extractFunctionCalls(parts);
 
     // If no function calls, the model gave a text response (shouldn't happen)
     if (functionCalls.length === 0) {
-      await query(
-        `INSERT INTO exceptions (ledger_id, reason, reasoning)
-         VALUES ($1, 'unexplained_discrepancy', $2)`,
-        [ledger.id, 'Agent responded with text only, no terminal tool called.'],
-      );
-      return {
-        ledger_id: ledger.id,
-        invoice_id: ledger.invoice_id,
-        outcome: 'exception',
-        exception_reason: 'unexplained_discrepancy',
+      return handleException(ledger, turn, 'no_terminal_call', {
+        reason: 'unexplained_discrepancy',
         reasoning: 'Agent responded with text only, no terminal tool called.',
-        trace,
-        turns: turnCount,
-        precheck: false,
-      };
+      }, trace);
     }
 
-    // Execute each function call and build responses
     const functionResponseParts: Part[] = [];
-    let terminalCalled = false;
-    let terminalResult: ReconciliationResult | null = null;
 
     for (const fc of functionCalls) {
       const input = (fc.args ?? {}) as Record<string, unknown>;
-      const isTerminal = fc.name === 'commit_match' || fc.name === 'flag_exception';
 
-      // Execute the tool
-      const result = await executeTool(fc.name, input);
+      // Terminal tools end the investigation; any calls after them are ignored
+      if (fc.name === 'commit_match') return handleCommitMatch(ledger, turn, input, trace);
+      if (fc.name === 'flag_exception') return handleException(ledger, turn, 'flag_exception', input, trace);
 
-      // Log to audit_log
-      await writeAuditLog(ledger.id, turnCount, fc.name, input, result);
-
-      // Record in trace
-      trace.push({ turn: turnCount, tool_name: fc.name, tool_input: input, tool_result: result });
-
-      // Handle terminal tools
-      if (isTerminal) {
-        terminalCalled = true;
-
-        if (fc.name === 'commit_match') {
-          const success = await executeCommitMatch(ledger.id, input);
-          if (success) {
-            terminalResult = {
-              ledger_id: ledger.id,
-              invoice_id: ledger.invoice_id,
-              outcome: 'matched',
-              method: input.method as string,
-              confidence: input.confidence as number,
-              reasoning: input.reasoning as string,
-              matched_bank_txn_id: input.bank_txn_id as string,
-              trace,
-              turns: turnCount,
-              precheck: false,
-            };
-          } else {
-            terminalResult = {
-              ledger_id: ledger.id,
-              invoice_id: ledger.invoice_id,
-              outcome: 'exception',
-              exception_reason: 'unexplained_discrepancy',
-              reasoning: `Guardrail triggered: model attempted to commit match with confidence ${input.confidence}, which is below 0.85 threshold. Original reasoning: ${input.reasoning}`,
-              best_candidate_id: (input.bank_txn_id as string) || null,
-              trace,
-              turns: turnCount,
-              precheck: false,
-            };
-          }
-        } else {
-          await executeFlagException(ledger.id, input);
-          terminalResult = {
-            ledger_id: ledger.id,
-            invoice_id: ledger.invoice_id,
-            outcome: 'exception',
-            exception_reason: input.reason as string,
-            reasoning: input.reasoning as string,
-            best_candidate_id: (input.best_candidate_id as string) || null,
-            trace,
-            turns: turnCount,
-            precheck: false,
-          };
-        }
+      let result: Record<string, unknown>;
+      if (toolCalls >= MAX_TOOL_CALLS) {
+        result = { error: `Tool-call budget of ${MAX_TOOL_CALLS} is exhausted. Call commit_match or flag_exception now.` };
+      } else {
+        toolCalls++;
+        result = await executeTool(fc.name, input);
       }
 
-      // Build function response part for Gemini
-      functionResponseParts.push({
-        functionResponse: {
-          name: fc.name,
-          response: result as Record<string, unknown>,
-        },
-      });
-    }
+      await writeAuditLog(ledger.id, turn, fc.name, input, result);
+      trace.push({ turn, tool_name: fc.name, tool_input: input, tool_result: result });
 
-    // If a terminal tool was called, we're done
-    if (terminalCalled && terminalResult) {
-      return terminalResult;
+      functionResponseParts.push({
+        functionResponse: { name: fc.name, response: result },
+      });
     }
 
     // Send function results back to Gemini
     contents.push({ role: 'user', parts: functionResponseParts });
-    response = await model.generateContent({ contents });
-    parts = response.response.candidates?.[0]?.content?.parts ?? [];
-    contents.push({ role: 'model', parts });
-
-    functionCalls = extractFunctionCalls(parts);
   }
 
-  // ── Hard-stop: exceeded MAX_TURNS ──────────────────────────────────
-  const timeoutReasoning = `Agent exceeded ${MAX_TURNS} turn limit without reaching a conclusion.`;
-  await query(
-    `INSERT INTO exceptions (ledger_id, reason, reasoning)
-     VALUES ($1, 'unexplained_discrepancy', $2)`,
-    [ledger.id, timeoutReasoning],
-  );
-  await writeAuditLog(ledger.id, turnCount, 'hard_stop', {}, { reason: 'turn_limit_exceeded' });
-
-  return {
-    ledger_id: ledger.id,
-    invoice_id: ledger.invoice_id,
-    outcome: 'timeout',
-    exception_reason: 'unexplained_discrepancy',
-    reasoning: timeoutReasoning,
-    trace,
-    turns: turnCount,
-    precheck: false,
-  };
+  // ── Hard-stop: model never reached a terminal call ──────────────────
+  return handleException(ledger, turn, 'hard_stop', {
+    reason: 'unexplained_discrepancy',
+    reasoning: `Agent did not reach a decision within ${MAX_TOOL_CALLS} tool calls.`,
+  }, trace, 'timeout');
 }

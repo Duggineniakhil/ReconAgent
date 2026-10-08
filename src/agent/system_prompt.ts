@@ -29,6 +29,11 @@ RULES:
   worse than a flagged exception, because a human catches the flagged one and no one
   catches the wrong auto-match. This threshold is strictly enforced.
 - Never call commit_match on a reference flagged as duplicate by check_duplicate_ref.
+- Never call commit_match on a candidate whose matched_to is set — that bank transaction
+  already belongs to another invoice.
+- These rules are re-checked by the server: a commit_match that breaks them (low confidence,
+  duplicate or already-claimed reference, amount off by more than 1%) is converted into an
+  exception automatically.
 - Always write your reasoning in plain language a non-technical reviewer could read in
   five seconds — this reasoning is shown directly to a human reviewer for every exception,
   and is stored permanently in the audit trail for every match, including auto-matched ones.

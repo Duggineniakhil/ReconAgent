@@ -11,6 +11,8 @@ export interface ExactCandidate {
   txn_date: string;
   payer_name: string;
   status: string;
+  /** Invoice this transaction is already matched to, or null if unclaimed. */
+  matched_to: string | null;
 }
 
 /**
@@ -26,11 +28,13 @@ export async function findExactCandidates(
   amount: number,
 ): Promise<ExactCandidate[]> {
   const result = await query<ExactCandidate>(
-    `SELECT id, txn_id, utr_ref, amount::float AS amount,
-            txn_date::text AS txn_date, payer_name, status
-     FROM   bank_transactions
-     WHERE  utr_ref = $1
-       AND  amount  = $2`,
+    `SELECT b.id, b.txn_id, b.utr_ref, b.amount::float AS amount,
+            b.txn_date::text AS txn_date, b.payer_name, b.status,
+            (SELECT l.invoice_id FROM matches m JOIN ledger_records l ON l.id = m.ledger_id
+              WHERE m.bank_txn_id = b.id) AS matched_to
+     FROM   bank_transactions b
+     WHERE  b.utr_ref = $1
+       AND  b.amount  = $2`,
     [reference, amount],
   );
 

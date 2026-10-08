@@ -393,6 +393,8 @@ const TraceModal = ({ ledgerId, onClose }: { ledgerId: number; onClose: () => vo
       if (name === 'flag_exception') return `Flagged as exception: ${input.reason}`;
       if (name === 'precheck_exact') return `Exact reference and amount match, no LLM call needed`;
       if (name === 'hard_stop') return `Tool-call budget exhausted without a decision`;
+      if (name === 'guardrail_override') return `Server guardrail blocked the match: ${input.message}`;
+      if (name === 'no_terminal_call') return `Agent replied without a decision`;
     } catch (e) {}
     return 'Action executed';
   };
@@ -418,7 +420,7 @@ const TraceModal = ({ ledgerId, onClose }: { ledgerId: number; onClose: () => vo
           ) : (
             <div className="space-y-0">
               {logs.map((log, i) => {
-                const isTerminal = ['commit_match', 'flag_exception', 'precheck_exact'].includes(log.tool_name);
+                const isTerminal = ['commit_match', 'flag_exception', 'precheck_exact', 'guardrail_override', 'hard_stop', 'no_terminal_call'].includes(log.tool_name);
                 const isExpanded = expandedSteps.has(i);
                 
                 return (

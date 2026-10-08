@@ -13,6 +13,8 @@ export interface FuzzyCandidate {
   status: string;
   amount_diff: number;
   date_diff_days: number;
+  /** Invoice this transaction is already matched to, or null if unclaimed. */
+  matched_to: string | null;
 }
 
 /**
@@ -38,15 +40,17 @@ export async function findFuzzyCandidates(
   const upperAmt  = amount + tolerance;
 
   const result = await query<FuzzyCandidate>(
-    `SELECT id, txn_id, utr_ref, amount::float AS amount,
-            txn_date::text AS txn_date, payer_name, status,
-            ABS(amount - $1)          AS amount_diff,
-            ABS(txn_date - $2::date)  AS date_diff_days
-     FROM   bank_transactions
-     WHERE  amount  BETWEEN $3 AND $4
-       AND  txn_date BETWEEN ($2::date - INTERVAL '3 days')
-                         AND ($2::date + INTERVAL '3 days')
-     ORDER  BY ABS(amount - $1) + ABS(txn_date - $2::date) ASC
+    `SELECT b.id, b.txn_id, b.utr_ref, b.amount::float AS amount,
+            b.txn_date::text AS txn_date, b.payer_name, b.status,
+            ABS(b.amount - $1)::float          AS amount_diff,
+            ABS(b.txn_date - $2::date)         AS date_diff_days,
+            (SELECT l.invoice_id FROM matches m JOIN ledger_records l ON l.id = m.ledger_id
+              WHERE m.bank_txn_id = b.id) AS matched_to
+     FROM   bank_transactions b
+     WHERE  b.amount  BETWEEN $3 AND $4
+       AND  b.txn_date BETWEEN ($2::date - INTERVAL '3 days')
+                           AND ($2::date + INTERVAL '3 days')
+     ORDER  BY ABS(b.amount - $1) + ABS(b.txn_date - $2::date) ASC
      LIMIT  5`,
     [amount, date, lowerAmt, upperAmt],
   );
