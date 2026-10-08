@@ -1,0 +1,34 @@
+[
+  {
+    "settlement_id": "setl_8oz6ABJu5H2aZz",
+    "settlement_utr": "UTIBR520260806426676",
+    "expected_status": "matched",
+    "expected_bank_txn_id": "TXN-00076",
+    "expected_amount": 122303.1,
+    "description": "Clean settlement"
+  },
+  {
+    "settlement_id": "setl_9aVsoNOvHNNUBc",
+    "settlement_utr": "UTIBR520260813422422",
+    "expected_status": "matched",
+    "expected_bank_txn_id": "TXN-00077",
+    "expected_amount": 125214.83,
+    "description": "Includes a refund of ₹2468.5 for pay_lkOxfdM1zBxpHU"
+  },
+  {
+    "settlement_id": "setl_k5zI1SkxaSqPkQ",
+    "settlement_utr": "UTIBR520260820903638",
+    "expected_status": "mismatch",
+    "expected_bank_txn_id": "TXN-00078",
+    "expected_amount": 54441.46,
+    "description": "Bank credit ₹1,180.00 short of the report (unexplained adjustment)"
+  },
+  {
+    "settlement_id": "setl_Ct76tjPQoeTkjR",
+    "settlement_utr": "UTIBR520260827664049",
+    "expected_status": "missing",
+    "expected_bank_txn_id": null,
+    "expected_amount": 73253.43,
+    "description": "Settlement UTR not found on the bank statement"
+  }
+]

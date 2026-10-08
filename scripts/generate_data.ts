@@ -7,6 +7,8 @@
  *   - data/ledger_records.csv   (70 rows)
  *   - data/bank_transactions.csv (~75 rows)
  *   - data/ground_truth.json    (answer key for every ledger record)
+ *   - data/razorpay_recon.json  (Razorpay settlement recon report, API format)
+ *   - data/settlement_truth.json (expected outcome per Razorpay settlement)
  *
  * Case-type mix (from spec section 4):
  *   clean_exact      42  (60%)  — identical ref, amount, date
@@ -22,6 +24,7 @@
 
 import fs from 'fs';
 import path from 'path';
+import { generateRazorpayScenario } from './razorpay_scenario';
 
 // ═══════════════════════════════════════════════════════════════════════
 //  SEEDED PRNG — Mulberry32
@@ -273,6 +276,8 @@ interface BankTransaction {
 interface GroundTruthEntry {
   ledger_invoice_id: string;
   expected_bank_txn_id: string | null;
+  /** Set for invoices paid through Razorpay: the payment they should match. */
+  expected_gateway_entity_id?: string | null;
   case_type: string;
 }
 
@@ -512,6 +517,14 @@ fs.mkdirSync(dataDir, { recursive: true });
 const shuffledLedger = rng.shuffle(ledger);
 const shuffledBank   = rng.shuffle(bank);
 
+// ── Razorpay scenario ─────────────────────────────────────────────────
+// Generated after the shuffle with its own seed and appended, so the rows
+// above are unchanged by it.
+const razorpay = generateRazorpayScenario({ nextInvoiceId, nextTxnId });
+shuffledLedger.push(...razorpay.ledger.map((r) => ({ ...r, _case_type: 'razorpay' })));
+shuffledBank.push(...razorpay.bank);
+truth.push(...razorpay.truth);
+
 // ── ledger_records.csv ────────────────────────────────────────────────
 const ledgerCsv = [
   'invoice_id,customer_name,amount,invoice_date,payment_ref',
@@ -527,6 +540,10 @@ const bankCsv = [
 ].join('\n');
 
 fs.writeFileSync(path.join(dataDir, 'bank_transactions.csv'), bankCsv + '\n', 'utf-8');
+
+// ── Razorpay recon report + settlement answer key ────────────────────
+fs.writeFileSync(path.join(dataDir, 'razorpay_recon.json'), JSON.stringify(razorpay.recon, null, 2) + '\n', 'utf-8');
+fs.writeFileSync(path.join(dataDir, 'settlement_truth.json'), JSON.stringify(razorpay.settlementTruth, null, 2) + '\n', 'utf-8');
 
 // ── ground_truth.json ─────────────────────────────────────────────────
 fs.writeFileSync(
@@ -634,4 +651,6 @@ console.log('  Files:');
 console.log(`    ${path.join(dataDir, 'ledger_records.csv')}`);
 console.log(`    ${path.join(dataDir, 'bank_transactions.csv')}`);
 console.log(`    ${path.join(dataDir, 'ground_truth.json')}`);
+console.log(`    ${path.join(dataDir, 'razorpay_recon.json')}  (${razorpay.recon.count} items)`);
+console.log(`    ${path.join(dataDir, 'settlement_truth.json')}  (${razorpay.settlementTruth.length} settlements)`);
 console.log('');

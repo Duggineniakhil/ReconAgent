@@ -348,5 +348,95 @@
     "ledger_invoice_id": "INV-2026-0070",
     "expected_bank_txn_id": null,
     "case_type": "duplicate_ref"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0071",
+    "expected_bank_txn_id": null,
+    "expected_gateway_entity_id": "pay_c9DgnI24cO7BKP",
+    "case_type": "razorpay_receipt"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0072",
+    "expected_bank_txn_id": null,
+    "expected_gateway_entity_id": "pay_lkOxfdM1zBxpHU",
+    "case_type": "razorpay_receipt"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0073",
+    "expected_bank_txn_id": null,
+    "expected_gateway_entity_id": "pay_AUaHwt0ycsEbY1",
+    "case_type": "razorpay_receipt"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0074",
+    "expected_bank_txn_id": null,
+    "expected_gateway_entity_id": "pay_JirCbw3Y8cbCEJ",
+    "case_type": "razorpay_no_receipt"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0075",
+    "expected_bank_txn_id": null,
+    "expected_gateway_entity_id": "pay_sVPek8KQQ7AL4R",
+    "case_type": "razorpay_receipt"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0076",
+    "expected_bank_txn_id": null,
+    "expected_gateway_entity_id": "pay_xUQWmlCy96L680",
+    "case_type": "razorpay_receipt"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0077",
+    "expected_bank_txn_id": null,
+    "expected_gateway_entity_id": "pay_odJjj7hhV7zVVW",
+    "case_type": "razorpay_receipt"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0078",
+    "expected_bank_txn_id": null,
+    "expected_gateway_entity_id": "pay_Lg8LfQqKBgrlEW",
+    "case_type": "razorpay_receipt"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0079",
+    "expected_bank_txn_id": null,
+    "expected_gateway_entity_id": "pay_VHGxem2ceB6Rth",
+    "case_type": "razorpay_receipt"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0080",
+    "expected_bank_txn_id": null,
+    "expected_gateway_entity_id": "pay_OPQNEXPd9QqxQB",
+    "case_type": "razorpay_no_receipt"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0081",
+    "expected_bank_txn_id": null,
+    "expected_gateway_entity_id": "pay_khJ3OPKWl5UFqH",
+    "case_type": "razorpay_receipt"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0082",
+    "expected_bank_txn_id": null,
+    "expected_gateway_entity_id": "pay_dtOWtN4qN80P0i",
+    "case_type": "razorpay_receipt"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0083",
+    "expected_bank_txn_id": null,
+    "expected_gateway_entity_id": "pay_J5vqIHBUTLPQFo",
+    "case_type": "razorpay_receipt"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0084",
+    "expected_bank_txn_id": null,
+    "expected_gateway_entity_id": "pay_dOkwmQjig0aCeu",
+    "case_type": "razorpay_receipt"
+  },
+  {
+    "ledger_invoice_id": "INV-2026-0085",
+    "expected_bank_txn_id": null,
+    "expected_gateway_entity_id": null,
+    "case_type": "razorpay_missing_payment"
   }
 ]
