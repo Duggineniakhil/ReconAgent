@@ -18,15 +18,18 @@ export type ExceptionReason =
   | 'duplicate_reference'
   | 'unexplained_discrepancy';
 
-/** Database facts about the bank transaction the model wants to commit to. */
+/** Database facts about the bank transaction or gateway payment the model wants to commit to. */
 export interface CommitTarget {
   txn_id: string;
   utr_ref: string | null;
+  /** Bank amount, or a gateway payment's gross amount (what the invoice was for). */
   amount: number;
-  /** Number of bank transactions sharing this utr_ref (1 = unique). */
+  /** Number of bank transactions sharing this utr_ref (1 = unique; always 1 for gateway lines). */
   ref_count: number;
-  /** Ledger invoice this transaction is already matched to, if any. */
+  /** Invoice or settlement that already owns this transaction, if any. */
   matched_to: string | null;
+  /** Gateway lines only: payment / refund / transfer / adjustment. */
+  entity_type?: string;
 }
 
 export type CommitCheck =
@@ -52,6 +55,14 @@ export function checkCommit(
       ok: false,
       reason: 'unexplained_discrepancy',
       message: `Confidence ${confidence} is below the ${MIN_CONFIDENCE} threshold.`,
+    };
+  }
+
+  if (target.entity_type && target.entity_type !== 'payment') {
+    return {
+      ok: false,
+      reason: 'unexplained_discrepancy',
+      message: `${target.txn_id} is a ${target.entity_type}; only payments can be matched to invoices.`,
     };
   }
 

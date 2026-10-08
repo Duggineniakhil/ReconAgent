@@ -11,10 +11,12 @@
 export interface GroundTruthEntry {
   ledger_invoice_id: string;
   expected_bank_txn_id: string | null;
+  /** For invoices paid through a gateway: the payment they should match. */
+  expected_gateway_entity_id?: string | null;
   case_type: string;
 }
 
-/** What the agent decided for a record: a bank txn id, or null for an exception. */
+/** What the agent decided for a record: a bank txn / gateway payment id, or null for an exception. */
 export type AgentDecisions = Map<string, string | null>;
 
 export interface CaseTypeStats {
@@ -51,10 +53,11 @@ export function evaluate(truth: GroundTruthEntry[], decisions: AgentDecisions): 
     }
 
     const matchedTxn = decisions.get(gt.ledger_invoice_id) ?? null;
+    const expected = gt.expected_gateway_entity_id ?? gt.expected_bank_txn_id;
     let isCorrect = false;
 
-    if (gt.expected_bank_txn_id !== null) {
-      if (matchedTxn === gt.expected_bank_txn_id) {
+    if (expected !== null) {
+      if (matchedTxn === expected) {
         TP++;
         isCorrect = true;
       } else if (matchedTxn !== null) {

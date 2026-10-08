@@ -46,7 +46,7 @@ describe.skipIf(!url)('reconcileRecord (integration)', () => {
   beforeEach(async () => {
     script.length = 0;
     generateContent.mockClear();
-    await db.query('TRUNCATE audit_log, exceptions, matches, bank_transactions, ledger_records RESTART IDENTITY CASCADE');
+    await db.query('TRUNCATE audit_log, exceptions, matches, settlement_matches, gateway_transactions, bank_transactions, ledger_records RESTART IDENTITY CASCADE');
   });
 
   async function ledger(invoice: string, amount: number, ref: string, date = '2026-08-10'): Promise<number> {

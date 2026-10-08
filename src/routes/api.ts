@@ -3,6 +3,8 @@ import { query, withTransaction } from '../db';
 import { ingestData, importUpload, currentDataset } from '../services/ingest';
 import { parseCsvRows, suggestMapping, LEDGER_FIELDS, BANK_FIELDS, type FieldDef } from '../services/csv_import';
 import { runManager, evaluateDecisions, BusyError, type RunRow } from '../services/runner';
+import { summariseSettlements, feeSummary } from '../services/settlements';
+import { credentialsFromEnv, syncRazorpay, RazorpayApiError } from '../services/razorpay';
 
 export const apiRouter = Router();
 
@@ -228,10 +230,16 @@ apiRouter.get('/matches', async (_req: Request, res: Response) => {
         l.amount as ledger_amount,
         l.payment_ref as ledger_ref,
         b.txn_id as bank_txn_id,
-        b.amount as bank_amount
+        b.amount as bank_amount,
+        g.entity_id as gateway_entity_id,
+        g.amount as gateway_amount,
+        g.fee as gateway_fee,
+        g.method as gateway_method,
+        g.settlement_id as gateway_settlement_id
       FROM matches m
       JOIN ledger_records l ON m.ledger_id = l.id
-      JOIN bank_transactions b ON m.bank_txn_id = b.id
+      LEFT JOIN bank_transactions b ON m.bank_txn_id = b.id
+      LEFT JOIN gateway_transactions g ON m.gateway_txn_id = g.id
       ORDER BY m.created_at DESC
     `);
     res.json(matches.rows);
@@ -259,11 +267,13 @@ apiRouter.get('/exceptions', async (_req: Request, res: Response) => {
         l.customer_name,
         l.amount as ledger_amount,
         l.payment_ref as ledger_ref,
-        b.txn_id as best_candidate_txn_id,
-        b.amount as best_candidate_amount
+        COALESCE(b.txn_id, g.entity_id) as best_candidate_txn_id,
+        COALESCE(b.amount, g.amount) as best_candidate_amount,
+        CASE WHEN g.id IS NOT NULL THEN 'gateway' WHEN b.id IS NOT NULL THEN 'bank' END as best_candidate_kind
       FROM exceptions e
       JOIN ledger_records l ON e.ledger_id = l.id
       LEFT JOIN bank_transactions b ON e.best_candidate_bank_txn_id = b.id
+      LEFT JOIN gateway_transactions g ON e.best_candidate_gateway_txn_id = g.id
       ORDER BY e.created_at DESC
     `);
     res.json(exceptions.rows);
@@ -279,7 +289,8 @@ apiRouter.get('/exceptions', async (_req: Request, res: Response) => {
 apiRouter.post('/exceptions/:id/resolve', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { action, bank_txn_id } = req.body; // action: 'match' | 'reject'
+    // action: 'match' | 'reject'; a match names bank_txn_id or gateway_entity_id
+    const { action, bank_txn_id, gateway_entity_id } = req.body;
 
     if (action !== 'match' && action !== 'reject') {
       res.status(400).json({ error: 'Invalid action, use "match" or "reject"' });
@@ -300,21 +311,28 @@ apiRouter.post('/exceptions/:id/resolve', async (req: Request, res: Response) =>
         return { message: 'Exception rejected / written off' };
       }
 
-      const bankResult = await client.query<{ id: number; matched_to: string | null }>(
-        `SELECT b.id,
-                (SELECT l.invoice_id FROM matches m JOIN ledger_records l ON l.id = m.ledger_id
-                  WHERE m.bank_txn_id = b.id) AS matched_to
-         FROM bank_transactions b WHERE b.txn_id = $1`,
-        [bank_txn_id],
+      const isGateway = Boolean(gateway_entity_id) && !bank_txn_id;
+      const targetId = isGateway ? gateway_entity_id : bank_txn_id;
+      const targetResult = await client.query<{ id: number; matched_to: string | null; entity_type: string }>(
+        isGateway
+          ? `SELECT g.id, g.entity_type,
+                    (SELECT l.invoice_id FROM matches m JOIN ledger_records l ON l.id = m.ledger_id
+                      WHERE m.gateway_txn_id = g.id) AS matched_to
+             FROM gateway_transactions g WHERE g.entity_id = $1`
+          : `SELECT b.id, 'bank' AS entity_type,
+                    (SELECT c.claimed_by FROM bank_claims c WHERE c.bank_txn_id = b.id LIMIT 1) AS matched_to
+             FROM bank_transactions b WHERE b.txn_id = $1`,
+        [targetId],
       );
-      const bank = bankResult.rows[0];
-      if (!bank) return { status: 400, error: 'Invalid bank_txn_id' };
-      if (bank.matched_to) return { status: 409, error: `${bank_txn_id} is already matched to ${bank.matched_to}` };
+      const target = targetResult.rows[0];
+      if (!target) return { status: 400, error: `Invalid ${isGateway ? 'gateway_entity_id' : 'bank_txn_id'}` };
+      if (isGateway && target.entity_type !== 'payment') return { status: 400, error: `${targetId} is a ${target.entity_type}, not a payment` };
+      if (target.matched_to) return { status: 409, error: `${targetId} is already matched to ${target.matched_to}` };
 
       await client.query(
-        `INSERT INTO matches (ledger_id, bank_txn_id, method, confidence, reasoning)
+        `INSERT INTO matches (ledger_id, ${isGateway ? 'gateway_txn_id' : 'bank_txn_id'}, method, confidence, reasoning)
          VALUES ($1, $2, 'manual', 1.0, 'Manually resolved by user')`,
-        [exc.ledger_id, bank.id],
+        [exc.ledger_id, target.id],
       );
       await client.query(`UPDATE exceptions SET status = 'approved', resolved_by = 'human' WHERE id = $1`, [id]);
       return { message: 'Resolved as match' };
@@ -346,6 +364,103 @@ apiRouter.get('/audit-log/:ledgerId', async (req: Request, res: Response) => {
     res.json(logs.rows);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+//  PAYMENT GATEWAY (RAZORPAY)
+// ═══════════════════════════════════════════════════════════════════════
+
+/**
+ * GET /api/settlements
+ * Every gateway settlement with its breakdown and, once a run has
+ * reconciled it, its outcome and bank credit.
+ */
+apiRouter.get('/settlements', async (_req: Request, res: Response) => {
+  try {
+    const summaries = await summariseSettlements();
+    const outcomes = await query<{
+      settlement_id: string; status: string; reasoning: string; difference: number | null;
+      bank_amount: number | null; bank_txn_id: string | null; bank_date: string | null;
+    }>(`
+      SELECT s.settlement_id, s.status, s.reasoning, s.difference::float AS difference,
+             s.bank_amount::float AS bank_amount, b.txn_id AS bank_txn_id, b.txn_date::text AS bank_date
+      FROM settlement_matches s LEFT JOIN bank_transactions b ON b.id = s.bank_txn_id
+    `);
+    const byId = new Map(outcomes.rows.map((o) => [o.settlement_id, o]));
+    res.json(summaries.map((s) => ({ ...s, outcome: byId.get(s.settlement_id) ?? null })));
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * GET /api/settlements/:id
+ * The payments, refunds and adjustments in one settlement, with the invoice
+ * each payment was matched to.
+ */
+apiRouter.get('/settlements/:id', async (req: Request, res: Response) => {
+  try {
+    const lines = await query(`
+      SELECT g.entity_id, g.entity_type, g.amount::float AS amount, g.fee::float AS fee, g.tax::float AS tax,
+             (g.credit - g.debit)::float AS net, g.method, g.order_receipt, g.payment_id,
+             g.created_at, l.invoice_id AS matched_invoice
+      FROM gateway_transactions g
+      LEFT JOIN matches m ON m.gateway_txn_id = g.id
+      LEFT JOIN ledger_records l ON l.id = m.ledger_id
+      WHERE g.settlement_id = $1
+      ORDER BY g.created_at
+    `, [req.params.id]);
+    res.json(lines.rows);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * GET /api/gateway/fees
+ * Gateway fees and GST on fees (input tax credit), overall and per payment method.
+ */
+apiRouter.get('/gateway/fees', async (_req: Request, res: Response) => {
+  try {
+    res.json(await feeSummary());
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * GET /api/razorpay/status
+ * Whether Razorpay API keys are configured (the keys themselves are never returned).
+ */
+apiRouter.get('/razorpay/status', (_req: Request, res: Response) => {
+  const creds = credentialsFromEnv();
+  res.json({ configured: creds !== null, mode: creds?.keyId.startsWith('rzp_live_') ? 'live' : creds ? 'test' : null });
+});
+
+/**
+ * POST /api/razorpay/sync
+ * Body: { from: 'YYYY-MM-DD', to: 'YYYY-MM-DD' }. Pulls the settlement recon
+ * report for each day into the current dataset. Settlements are reconciled
+ * on the next run.
+ */
+apiRouter.post('/razorpay/sync', async (req: Request, res: Response) => {
+  const creds = credentialsFromEnv();
+  if (!creds) {
+    res.status(400).json({ error: 'Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in .env to sync from Razorpay' });
+    return;
+  }
+  const { from, to } = req.body ?? {};
+  if (typeof from !== 'string' || typeof to !== 'string') {
+    res.status(400).json({ error: 'from and to (YYYY-MM-DD) are required' });
+    return;
+  }
+  try {
+    const result = await runManager.withLock('ingest', () => syncRazorpay(from, to, creds));
+    res.json({ success: true, ...result });
+  } catch (err: any) {
+    const status = err instanceof BusyError ? 409 : err instanceof RazorpayApiError ? 502 : 400;
+    res.status(status).json({ error: err.message });
   }
 });
 

@@ -20,6 +20,8 @@ import {
   findFuzzyCandidates,
   compareNames,
   checkDuplicateRef,
+  findGatewayPayments,
+  explainBankCredit,
 } from '../tools';
 import { generate } from './gemini';
 import { checkCommit, type CommitTarget, type ExceptionReason } from './guardrails';
@@ -138,6 +140,18 @@ async function executeTool(
     case 'check_duplicate_ref':
       return checkDuplicateRef(toolInput.reference as string) as unknown as Record<string, unknown>;
 
+    case 'find_gateway_payments': {
+      const payments = await findGatewayPayments(
+        toolInput.amount as number,
+        toolInput.date as string,
+        (toolInput.receipt as string | undefined) || undefined,
+      );
+      return { payments };
+    }
+
+    case 'explain_bank_credit':
+      return explainBankCredit(toolInput.bank_txn_id as string) as unknown as Record<string, unknown>;
+
     default:
       return { error: `Unknown tool: ${toolName}` };
   }
@@ -146,19 +160,35 @@ async function executeTool(
 //  TERMINAL HANDLERS  (each runs in a single transaction)
 // ═══════════════════════════════════════════════════════════════════════
 
+type TargetKind = 'bank' | 'gateway';
+
+/** Which kind of transaction a commit_match points at; null unless exactly one ID is given. */
+function commitTargetRef(input: Record<string, unknown>): { kind: TargetKind; id: string } | null {
+  const bank = String(input.bank_txn_id ?? '').trim();
+  const gateway = String(input.gateway_entity_id ?? '').trim();
+  if (bank && !gateway) return { kind: 'bank', id: bank };
+  if (gateway && !bank) return { kind: 'gateway', id: gateway };
+  return null;
+}
+
 async function loadCommitTarget(
   client: PoolClient,
+  kind: TargetKind,
   txnId: string,
 ): Promise<(CommitTarget & { id: number }) | null> {
-  const result = await client.query<CommitTarget & { id: number }>(
-    `SELECT b.id, b.txn_id, b.utr_ref, b.amount::float AS amount,
-            (SELECT COUNT(*)::int FROM bank_transactions d WHERE d.utr_ref = b.utr_ref) AS ref_count,
-            (SELECT l.invoice_id FROM matches m JOIN ledger_records l ON l.id = m.ledger_id
-              WHERE m.bank_txn_id = b.id) AS matched_to
-     FROM   bank_transactions b
-     WHERE  b.txn_id = $1`,
-    [txnId],
-  );
+  const sql = kind === 'bank'
+    ? `SELECT b.id, b.txn_id, b.utr_ref, b.amount::float AS amount,
+              (SELECT COUNT(*)::int FROM bank_transactions d WHERE d.utr_ref = b.utr_ref) AS ref_count,
+              (SELECT c.claimed_by FROM bank_claims c WHERE c.bank_txn_id = b.id LIMIT 1) AS matched_to
+       FROM   bank_transactions b
+       WHERE  b.txn_id = $1`
+    : `SELECT g.id, g.entity_id AS txn_id, g.settlement_utr AS utr_ref, g.amount::float AS amount,
+              1 AS ref_count, g.entity_type,
+              (SELECT l.invoice_id FROM matches m JOIN ledger_records l ON l.id = m.ledger_id
+                WHERE m.gateway_txn_id = g.id) AS matched_to
+       FROM   gateway_transactions g
+       WHERE  g.entity_id = $1`;
+  const result = await client.query<CommitTarget & { id: number }>(sql, [txnId]);
   return result.rows[0] ?? null;
 }
 
@@ -169,18 +199,27 @@ async function insertException(
   reasoning: string,
   bestCandidateTxnId: string | null,
 ): Promise<void> {
-  let bestCandidateId: number | null = null;
+  // The best candidate may be a bank transaction or a gateway payment
+  let bankId: number | null = null;
+  let gatewayId: number | null = null;
   if (bestCandidateTxnId) {
     const bank = await client.query<{ id: number }>(
       `SELECT id FROM bank_transactions WHERE txn_id = $1`,
       [bestCandidateTxnId],
     );
-    bestCandidateId = bank.rows[0]?.id ?? null;
+    bankId = bank.rows[0]?.id ?? null;
+    if (bankId === null) {
+      const gateway = await client.query<{ id: number }>(
+        `SELECT id FROM gateway_transactions WHERE entity_id = $1`,
+        [bestCandidateTxnId],
+      );
+      gatewayId = gateway.rows[0]?.id ?? null;
+    }
   }
   await client.query(
-    `INSERT INTO exceptions (ledger_id, reason, best_candidate_bank_txn_id, reasoning, run_id)
-     VALUES ($1, $2, $3, $4, $5)`,
-    [ctx.ledger.id, reason, bestCandidateId, reasoning, ctx.runId],
+    `INSERT INTO exceptions (ledger_id, reason, best_candidate_bank_txn_id, best_candidate_gateway_txn_id, reasoning, run_id)
+     VALUES ($1, $2, $3, $4, $5, $6)`,
+    [ctx.ledger.id, reason, bankId, gatewayId, reasoning, ctx.runId],
   );
 }
 
@@ -201,19 +240,27 @@ async function handleCommitMatch(
   turn: number,
   input: Record<string, unknown>,
 ): Promise<ReconciliationResult> {
-  const txnId = String(input.bank_txn_id ?? '');
+  const ref = commitTargetRef(input);
+  const txnId = ref?.id ?? '';
   const confidence = Number(input.confidence) || 0;
 
   return withTransaction(async (client) => {
-    const target = await loadCommitTarget(client, txnId);
-    const check = checkCommit(ctx.ledger.amount, confidence, target, txnId);
+    const target = ref ? await loadCommitTarget(client, ref.kind, ref.id) : null;
+    const check: ReturnType<typeof checkCommit> = ref
+      ? checkCommit(ctx.ledger.amount, confidence, target, txnId)
+      : {
+          ok: false,
+          reason: 'unexplained_discrepancy',
+          message: 'commit_match must name exactly one of bank_txn_id or gateway_entity_id.',
+        };
 
     await writeAuditLog(ctx, turn, 'commit_match', input,
       { status: check.ok ? 'committed' : 'rejected_by_guardrail' }, client);
 
     if (check.ok) {
+      const column = ref!.kind === 'bank' ? 'bank_txn_id' : 'gateway_txn_id';
       await client.query(
-        `INSERT INTO matches (ledger_id, bank_txn_id, method, confidence, reasoning, run_id)
+        `INSERT INTO matches (ledger_id, ${column}, method, confidence, reasoning, run_id)
          VALUES ($1, $2, $3, $4, $5, $6)`,
         [ctx.ledger.id, target!.id, input.method, confidence, input.reasoning, ctx.runId],
       );
@@ -229,7 +276,7 @@ async function handleCommitMatch(
 
     const reasoning = `Guardrail blocked the agent's match to ${txnId}: ${check.message} Agent reasoning: ${input.reasoning}`;
     await writeAuditLog(ctx, turn, 'guardrail_override',
-      { bank_txn_id: txnId, reason: check.reason, message: check.message }, { flagged: true }, client);
+      { target: txnId, reason: check.reason, message: check.message }, { flagged: true }, client);
     await insertException(client, ctx, check.reason, reasoning, target ? txnId : null);
 
     return {
@@ -279,7 +326,7 @@ async function tryPrecheck(ctx: Ctx): Promise<ReconciliationResult | null> {
   // Find all bank txns with this reference that aren't already matched
   const refResult = await query<{ id: number; txn_id: string; amount: number; matched: boolean }>(
     `SELECT b.id, b.txn_id, b.amount::float AS amount,
-            EXISTS (SELECT 1 FROM matches m WHERE m.bank_txn_id = b.id) AS matched
+            EXISTS (SELECT 1 FROM bank_claims c WHERE c.bank_txn_id = b.id) AS matched
      FROM   bank_transactions b
      WHERE  b.utr_ref = $1`,
     [ledger.payment_ref],
@@ -316,6 +363,48 @@ async function tryPrecheck(ctx: Ctx): Promise<ReconciliationResult | null> {
     confidence: 1.0,
     reasoning,
     matched_bank_txn_id: bankTxn.txn_id,
+    precheck: true,
+  };
+}
+
+/**
+ * Gateway precheck: a Razorpay payment whose order receipt (or notes.invoice)
+ * is this invoice ID, for exactly the invoice amount, is a trivial match.
+ */
+async function tryGatewayPrecheck(ctx: Ctx): Promise<ReconciliationResult | null> {
+  const { ledger } = ctx;
+  const result = await query<{ id: number; entity_id: string; amount: number; fee: number; matched: boolean }>(
+    `SELECT g.id, g.entity_id, g.amount::float AS amount, g.fee::float AS fee,
+            EXISTS (SELECT 1 FROM matches m WHERE m.gateway_txn_id = g.id) AS matched
+     FROM   gateway_transactions g
+     WHERE  g.entity_type = 'payment'
+       AND  (g.order_receipt = $1 OR g.notes->>'invoice' = $1)`,
+    [ledger.invoice_id],
+  );
+  if (result.rows.length !== 1) return null;
+  const payment = result.rows[0];
+  if (payment.matched || payment.amount !== ledger.amount) return null;
+
+  const reasoning = `Precheck: Razorpay payment ${payment.entity_id} has order receipt ${ledger.invoice_id} and amount ${ledger.amount} (fee ${payment.fee} deducted at settlement).`;
+  await withTransaction(async (client) => {
+    await client.query(
+      `INSERT INTO matches (ledger_id, gateway_txn_id, method, confidence, reasoning, run_id)
+       VALUES ($1, $2, 'exact', 1.000, $3, $4)`,
+      [ledger.id, payment.id, reasoning, ctx.runId],
+    );
+    await writeAuditLog(ctx, 0, 'precheck_gateway',
+      { receipt: ledger.invoice_id, amount: ledger.amount },
+      { matched: true, gateway_entity_id: payment.entity_id, method: 'exact' },
+      client);
+  });
+
+  return {
+    ...baseResult(ctx, 0),
+    outcome: 'matched',
+    method: 'exact',
+    confidence: 1.0,
+    reasoning,
+    matched_bank_txn_id: payment.entity_id,
     precheck: true,
   };
 }
@@ -377,8 +466,8 @@ export async function reconcileRecord(
     usage: { llm_calls: 0, input_tokens: 0, output_tokens: 0 },
   };
 
-  // ── Precheck ────────────────────────────────────────────────────────
-  const precheckResult = await tryPrecheck(ctx);
+  // ── Prechecks ───────────────────────────────────────────────────────
+  const precheckResult = (await tryPrecheck(ctx)) ?? (await tryGatewayPrecheck(ctx));
   if (precheckResult) return precheckResult;
 
   // ── Agent loop via Gemini ───────────────────────────────────────────
@@ -389,7 +478,7 @@ export async function reconcileRecord(
     `Customer Name: ${ledger.customer_name}`,
     `Amount: ${ledger.amount}`,
     `Invoice Date: ${ledger.invoice_date}`,
-    `Payment Reference: ${ledger.payment_ref}`,
+    `Payment Reference: ${ledger.payment_ref || '(none recorded)'}`,
   ].join('\n');
 
   const contents: Content[] = [

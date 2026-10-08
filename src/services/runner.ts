@@ -15,6 +15,7 @@ import { query } from '../db';
 import config from '../config';
 import { reconcileRecord, MODEL_NAME, PROMPT_VERSION } from '../agent';
 import { currentDataset } from './ingest';
+import { reconcileSettlements } from './settlements';
 import { evaluate, type GroundTruthEntry, type EvaluationResult } from './metrics';
 
 export type RunStatus = 'running' | 'completed' | 'failed' | 'cancelled' | 'interrupted';
@@ -37,6 +38,8 @@ export interface RunRow {
   output_tokens: number;
   failures: { ledger_id: number; invoice_id?: string; error: string }[];
   metrics: EvaluationResult | null;
+  /** Settlement outcomes decided by this run: { matched, mismatch, missing }. */
+  settlements: Record<string, number> | null;
   error: string | null;
   started_at: string;
   finished_at: string | null;
@@ -74,11 +77,13 @@ export async function evaluateDecisions(runId?: number): Promise<EvaluationResul
 
   const filter = runId === undefined ? '' : 'AND x.run_id = $1';
   const params = runId === undefined ? [] : [runId];
+  // A match's counterpart is a bank txn or a gateway payment
   const decisions = await query<{ invoice_id: string; bank_txn_id: string | null }>(`
-    SELECT l.invoice_id, b.txn_id AS bank_txn_id
+    SELECT l.invoice_id, COALESCE(b.txn_id, g.entity_id) AS bank_txn_id
     FROM matches x
     JOIN ledger_records l ON x.ledger_id = l.id
-    JOIN bank_transactions b ON x.bank_txn_id = b.id
+    LEFT JOIN bank_transactions b ON x.bank_txn_id = b.id
+    LEFT JOIN gateway_transactions g ON x.gateway_txn_id = g.id
     WHERE x.method <> 'manual' ${filter}
     UNION ALL
     SELECT l.invoice_id, NULL
@@ -204,6 +209,11 @@ class RunManager extends EventEmitter {
     };
 
     try {
+      // Settlements first: once their bank credits are claimed, the agent
+      // can't mistake a Razorpay payout for a single invoice's payment.
+      const settlements = await reconcileSettlements(run.id);
+      await this.bump(run.id, `settlements = $2`, [JSON.stringify(settlements)]);
+
       await Promise.all(Array.from({ length: Math.min(run.concurrency, ids.length) }, worker));
       const metrics = await evaluateDecisions(run.id);
       const status: RunStatus = fatalError ? 'failed' : this.cancelRequested ? 'cancelled' : 'completed';

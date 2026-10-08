@@ -3,6 +3,7 @@ import path from 'path';
 import type { PoolClient } from 'pg';
 import { query, withTransaction } from '../db';
 import config from '../config';
+import { normaliseReconItem, upsertGatewayTransactions, type GatewayInput, type RazorpayReconItem } from './razorpay';
 import {
   parseCsv,
   mapRows,
@@ -51,9 +52,11 @@ export async function loadDataset(
   source: 'demo' | 'upload',
   ledger: LedgerInput[],
   bank: BankInput[],
+  gateway: GatewayInput[] = [],
 ): Promise<DatasetInfo> {
   return withTransaction(async (client: PoolClient) => {
-    await client.query('TRUNCATE audit_log, exceptions, matches, bank_transactions, ledger_records RESTART IDENTITY CASCADE');
+    await client.query(`TRUNCATE audit_log, exceptions, matches, settlement_matches, gateway_transactions,
+                        bank_transactions, ledger_records RESTART IDENTITY CASCADE`);
 
     // Bulk insert via unnest: one round trip per table regardless of size
     await client.query(
@@ -79,6 +82,8 @@ export async function loadDataset(
         bank.map((r) => r.status || null),
       ],
     );
+
+    await upsertGatewayTransactions(gateway, client);
 
     const result = await client.query<DatasetInfo>(
       `INSERT INTO datasets (name, source, ledger_count, bank_count)
@@ -106,11 +111,18 @@ export async function ingestData(dataDir?: string): Promise<{ ledgerCount: numbe
   const ledgerRows = parseCsv(fs.readFileSync(path.join(dir, 'ledger_records.csv'), 'utf-8'));
   const bankRows = parseCsv(fs.readFileSync(path.join(dir, 'bank_transactions.csv'), 'utf-8'));
 
+  // Razorpay settlement recon report for the invoices paid online (API format)
+  const reconPath = path.join(dir, 'razorpay_recon.json');
+  const gateway = fs.existsSync(reconPath)
+    ? (JSON.parse(fs.readFileSync(reconPath, 'utf-8')).items as RazorpayReconItem[]).map(normaliseReconItem)
+    : [];
+
   const dataset = await loadDataset(
     'Demo dataset (synthetic)',
     'demo',
     ledgerRows as unknown as LedgerInput[],
     bankRows as unknown as BankInput[],
+    gateway,
   );
   return { ledgerCount: ledgerRows.length, bankCount: bankRows.length, dataset };
 }

@@ -15,10 +15,21 @@ INVESTIGATION STRATEGY (use your judgment, but this is the sane order):
 2. If no exact match, call find_fuzzy_candidates to search by amount/date proximity.
 3. If find_fuzzy_candidates returns 2+ plausible candidates, call compare_names to help
    disambiguate which one is the real counterpart.
-4. Before committing ANY match, you MUST ALWAYS call check_duplicate_ref on the reference number of your chosen candidate. A reused reference is a red flag (fraud-adjacent) even if amount and name look perfect — flag it as an exception rather than commit, and explain why.
-5. If you find no reasonable candidate after steps 1-2, or your best candidate has
-   meaningful unexplained discrepancies (amount off by more than a rounding tolerance,
-   date gap beyond a normal settlement window, name similarity that's weak), do not guess.
+4. Before committing a match to a bank transaction, you MUST ALWAYS call check_duplicate_ref on the reference number of your chosen candidate. A reused reference is a red flag (fraud-adjacent) even if amount and name look perfect — flag it as an exception rather than commit, and explain why.
+5. Invoices paid online through Razorpay never appear on the bank statement on their own:
+   Razorpay pays out many payments together as one settlement credit (payer RAZORPAY),
+   net of its fees and GST and of any refunds. If the invoice has no payment reference or
+   no direct bank match, call find_gateway_payments with the invoice amount, date and
+   invoice ID as receipt. A payment whose order_receipt or notes name this invoice, or whose
+   amount, date and notes clearly fit it, is the match: commit it with gateway_entity_id.
+   The fee is deducted at settlement, so compare the invoice with the payment's gross
+   amount, not its net. Never match an invoice to a settlement credit itself; if a bank
+   candidate looks like a gateway payout, call explain_bank_credit to see what it covers.
+6. If you find no reasonable candidate after these steps, or your best candidate has
+   meaningful unexplained discrepancies (amount off by more than 1%, date gap beyond a
+   normal settlement window, name similarity that's weak), do not guess.
+   Differences within 1% of the invoice amount (e.g. a few rupees of rounding or bank
+   charges) are normal and are not by themselves a reason to flag an otherwise clear match.
    Flag it as an exception.
 
 RULES:
@@ -29,8 +40,10 @@ RULES:
   worse than a flagged exception, because a human catches the flagged one and no one
   catches the wrong auto-match. This threshold is strictly enforced.
 - Never call commit_match on a reference flagged as duplicate by check_duplicate_ref.
-- Never call commit_match on a candidate whose matched_to is set — that bank transaction
-  already belongs to another invoice.
+- Never call commit_match on a candidate whose matched_to is set — that transaction
+  already belongs to another invoice or to a gateway settlement.
+- commit_match takes exactly one of bank_txn_id (a bank transaction) or gateway_entity_id
+  (a Razorpay payment, pay_...). Only payments can be matched, never refunds.
 - These rules are re-checked by the server: a commit_match that breaks them (low confidence,
   duplicate or already-claimed reference, amount off by more than 1%) is converted into an
   exception automatically.

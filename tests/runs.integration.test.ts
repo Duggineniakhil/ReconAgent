@@ -72,7 +72,7 @@ describe.skipIf(!url)('runs and uploads (integration)', () => {
   beforeEach(async () => {
     behaviour = async () => flag;
     generateContent.mockClear();
-    await db.query('TRUNCATE audit_log, exceptions, matches, bank_transactions, ledger_records, runs, datasets RESTART IDENTITY CASCADE');
+    await db.query('TRUNCATE audit_log, exceptions, matches, settlement_matches, gateway_transactions, bank_transactions, ledger_records, runs, datasets RESTART IDENTITY CASCADE');
     // INV-1 is a clean exact match (precheck); INV-2..4 need the model
     await ingest.loadDataset('Test demo', 'demo', [
       { invoice_id: 'INV-1', customer_name: 'Acme', amount: 1000, invoice_date: '2026-08-10', payment_ref: 'REF-1' },

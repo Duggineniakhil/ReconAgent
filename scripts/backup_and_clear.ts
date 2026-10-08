@@ -10,12 +10,17 @@ async function run() {
     const matches = await query('SELECT * FROM matches');
     const exceptions = await query('SELECT * FROM exceptions');
     const audit = await query('SELECT * FROM audit_log');
+    const gateway = await query('SELECT * FROM gateway_transactions');
+    const settlements = await query('SELECT * FROM settlement_matches');
 
+    // Run history isn't backed up, so outcomes are restored without their run_id
     const data = {
       ledger_records: ledger.rows,
       bank_transactions: bank.rows,
+      gateway_transactions: gateway.rows,
       matches: matches.rows,
       exceptions: exceptions.rows,
+      settlement_matches: settlements.rows,
       audit_log: audit.rows
     };
 
@@ -24,11 +29,8 @@ async function run() {
     console.log(`Backup saved to ${backupPath}`);
 
     console.log('Clearing database for demo...');
-    await query('TRUNCATE TABLE audit_log CASCADE');
-    await query('TRUNCATE TABLE matches CASCADE');
-    await query('TRUNCATE TABLE exceptions CASCADE');
-    await query('TRUNCATE TABLE bank_transactions CASCADE');
-    await query('TRUNCATE TABLE ledger_records CASCADE');
+    await query(`TRUNCATE audit_log, exceptions, matches, settlement_matches, gateway_transactions,
+                 bank_transactions, ledger_records CASCADE`);
     console.log('Database cleared. Dashboard will show 0/0/0.');
     
     process.exit(0);

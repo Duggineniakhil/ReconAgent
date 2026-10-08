@@ -58,13 +58,40 @@ export const FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
     },
   },
   {
-    name: 'commit_match',
+    name: 'find_gateway_payments',
     description:
-      'TERMINAL ACTION. Finalizes a match between the ledger record and a specific bank transaction.',
+      'Search Razorpay payments (from the settlement report) for an invoice paid online: by order receipt / notes when a receipt is given, and by amount +/- 1% and payment date +/- 3 days. Use when the invoice has no direct bank match: online payments reach the bank only as one settlement credit net of fees.',
     parameters: {
       type: SchemaType.OBJECT,
       properties: {
-        bank_txn_id: { type: SchemaType.STRING, description: 'Bank transaction ID to match' },
+        amount: { type: SchemaType.NUMBER, description: 'Invoice amount (gateway payments carry the gross amount)' },
+        date: { type: SchemaType.STRING, description: 'Invoice date (YYYY-MM-DD)' },
+        receipt: { type: SchemaType.STRING, description: 'Invoice ID to look for in order_receipt and notes' },
+      },
+      required: ['amount', 'date'],
+    },
+  },
+  {
+    name: 'explain_bank_credit',
+    description:
+      'Explains a bank credit: if it is a payment gateway settlement (e.g. from RAZORPAY), lists the payments, refunds and fees it pays out. Use when a bank candidate looks like a gateway payout; a settlement credit covers many invoices and must never be matched to a single invoice.',
+    parameters: {
+      type: SchemaType.OBJECT,
+      properties: {
+        bank_txn_id: { type: SchemaType.STRING, description: 'Bank transaction ID (e.g. TXN-00076)' },
+      },
+      required: ['bank_txn_id'],
+    },
+  },
+  {
+    name: 'commit_match',
+    description:
+      'TERMINAL ACTION. Finalizes a match between the ledger record and either a bank transaction (bank_txn_id) or a Razorpay payment (gateway_entity_id). Provide exactly one of the two.',
+    parameters: {
+      type: SchemaType.OBJECT,
+      properties: {
+        bank_txn_id: { type: SchemaType.STRING, description: 'Bank transaction ID to match (direct bank receipts)' },
+        gateway_entity_id: { type: SchemaType.STRING, description: 'Razorpay payment ID to match (pay_...), for invoices paid online' },
         confidence: { type: SchemaType.NUMBER, description: 'Confidence score 0-1' },
         method: {
           type: SchemaType.STRING,
@@ -74,7 +101,7 @@ export const FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
         },
         reasoning: { type: SchemaType.STRING, description: 'Plain-language explanation' },
       },
-      required: ['bank_txn_id', 'confidence', 'method', 'reasoning'],
+      required: ['confidence', 'method', 'reasoning'],
     },
   },
   {
@@ -97,7 +124,7 @@ export const FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
         },
         best_candidate_id: {
           type: SchemaType.STRING,
-          description: 'Best candidate bank txn ID if any, or empty string if none',
+          description: 'Best candidate bank txn ID or Razorpay payment ID if any, or empty string if none',
         },
         reasoning: { type: SchemaType.STRING, description: 'Plain-language explanation' },
       },
