@@ -69,6 +69,7 @@ apiRouter.get('/matches', async (req: Request, res: Response) => {
     const matches = await query(`
       SELECT 
         m.id as match_id,
+        m.ledger_id,
         m.method,
         m.confidence,
         m.reasoning,

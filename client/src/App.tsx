@@ -11,7 +11,8 @@ export function cn(...inputs: (string | undefined | null | false)[]) {
  return twMerge(clsx(inputs));
 }
 
-// Dummy components for now
+const inr = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
+
 const Dashboard = () => {
  const [metrics, setMetrics] = useState<Metrics | null>(null);
  const [matches, setMatches] = useState<Match[]>([]);
@@ -22,15 +23,7 @@ const Dashboard = () => {
  try {
  const [m, mats] = await Promise.all([fetchMetrics(), fetchMatches()]);
  setMetrics(m);
- // Append demo fuzzy/reasoned matches for the distribution chart
- const demoForChart: Match[] = [
-   { match_id: 9001, method: 'fuzzy', confidence: 0.94, reasoning: '', invoice_id: 'demo', customer_name: '', ledger_amount: 0, ledger_ref: '', bank_txn_id: '', bank_amount: 0 },
-   { match_id: 9002, method: 'fuzzy', confidence: 0.91, reasoning: '', invoice_id: 'demo', customer_name: '', ledger_amount: 0, ledger_ref: '', bank_txn_id: '', bank_amount: 0 },
-   { match_id: 9003, method: 'fuzzy', confidence: 0.92, reasoning: '', invoice_id: 'demo', customer_name: '', ledger_amount: 0, ledger_ref: '', bank_txn_id: '', bank_amount: 0 },
-   { match_id: 9004, method: 'reasoned', confidence: 0.89, reasoning: '', invoice_id: 'demo', customer_name: '', ledger_amount: 0, ledger_ref: '', bank_txn_id: '', bank_amount: 0 },
-   { match_id: 9005, method: 'reasoned', confidence: 0.87, reasoning: '', invoice_id: 'demo', customer_name: '', ledger_amount: 0, ledger_ref: '', bank_txn_id: '', bank_amount: 0 },
- ];
- setMatches([...mats, ...demoForChart]);
+ setMatches(mats);
  } catch (err) {
  console.error(err);
  }
@@ -60,13 +53,16 @@ const Dashboard = () => {
     return acc;
   }, {} as Record<string, number>);
   
-  const totalProcessed = Number(metrics?.total_matches || 0) + Number(metrics?.total_exceptions || 0);
+  // Each processed record ends up either matched (any method) or with an unapproved exception
+  const exceptionCount = Number(metrics?.open_exceptions || 0) + Number(metrics?.rejected_exceptions || 0);
+  const totalProcessed = matches.length + exceptionCount;
   const getPercentage = (count: number) => totalProcessed === 0 ? 0 : (count / totalProcessed) * 100;
   
   const exactCount = methodCounts['exact'] || 0;
   const fuzzyCount = methodCounts['fuzzy'] || 0;
   const reasonedCount = methodCounts['reasoned'] || 0;
-  const exceptionCount = Number(metrics?.total_exceptions || 0);
+  const manualCount = methodCounts['manual'] || 0;
+  const autoMatchedCount = exactCount + fuzzyCount + reasonedCount;
 
   const hasData = totalProcessed > 0;
 
@@ -111,11 +107,11 @@ const Dashboard = () => {
         <div className="flex-1 p-6 flex flex-col justify-center">
           <span className="text-xs font-sans text-text-muted mb-1">Total matches</span>
           <span className="text-3xl font-mono font-bold text-text">{metrics?.total_matches || '0'}</span>
-          <span className="text-[11px] font-sans text-text-muted mt-2">{metrics?.total_matches || '0'} of {metrics?.total_records || '0'} auto-matched</span>
+          <span className="text-[11px] font-sans text-text-muted mt-2">{autoMatchedCount} of {metrics?.total_records || '0'} auto-matched</span>
         </div>
         <div className="flex-1 p-6 flex flex-col justify-center">
           <span className="text-xs font-sans text-text-muted mb-1">Exceptions</span>
-          <span className="text-3xl font-mono font-bold text-accent-exception">{metrics?.total_exceptions || '0'}</span>
+          <span className="text-3xl font-mono font-bold text-accent-exception">{metrics?.open_exceptions || '0'}</span>
           <span className="text-[11px] font-sans text-text-muted mt-2">Requires manual review</span>
         </div>
         <div className="flex-1 p-6 flex flex-col justify-center">
@@ -139,6 +135,7 @@ const Dashboard = () => {
               {getPercentage(exactCount) > 0 && <div style={{ width: `${getPercentage(exactCount)}%` }} className="bg-accent-matched transition-all duration-500" title={`Exact: ${exactCount}`} />}
               {getPercentage(fuzzyCount) > 0 && <div style={{ width: `${getPercentage(fuzzyCount)}%` }} className="bg-accent-matched/60 transition-all duration-500" title={`Fuzzy: ${fuzzyCount}`} />}
               {getPercentage(reasonedCount) > 0 && <div style={{ width: `${getPercentage(reasonedCount)}%` }} className="bg-border transition-all duration-500" title={`Reasoned: ${reasonedCount}`} />}
+              {getPercentage(manualCount) > 0 && <div style={{ width: `${getPercentage(manualCount)}%` }} className="bg-text-muted transition-all duration-500" title={`Manual: ${manualCount}`} />}
               {getPercentage(exceptionCount) > 0 && <div style={{ width: `${getPercentage(exceptionCount)}%` }} className="bg-accent-exception transition-all duration-500" title={`Exceptions: ${exceptionCount}`} />}
             </div>
             
@@ -155,6 +152,12 @@ const Dashboard = () => {
                 <span className="w-2.5 h-2.5 rounded-full bg-border"></span>
                 <span>Reasoned <span className="font-mono text-text ml-1.5">{reasonedCount}</span></span>
               </div>
+              {manualCount > 0 && (
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-text-muted"></span>
+                  <span>Manual <span className="font-mono text-text ml-1.5">{manualCount}</span></span>
+                </div>
+              )}
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-accent-exception"></span>
                 <span>Exception <span className="font-mono text-text ml-1.5">{exceptionCount}</span></span>
@@ -276,14 +279,14 @@ const ExceptionsQueue = ({ onTrace }: { onTrace: (id: number) => void }) => {
                   <div>
                     <p className="text-text-muted text-xs mb-1">Ledger Target</p>
                     <p className="font-mono text-text">
-                      {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(exc.ledger_amount)}
+                      {inr.format(exc.ledger_amount)}
                     </p>
                     <p className="font-mono text-text-muted text-xs truncate mt-0.5">{exc.ledger_ref}</p>
                   </div>
                   <div>
                     <p className="text-text-muted text-xs mb-1">Found Bank Txn</p>
                     <p className="font-mono text-text">
-                      {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(exc.best_candidate_amount || 0)}
+                      {inr.format(exc.best_candidate_amount || 0)}
                     </p>
                     <p className="font-mono text-text-muted text-xs mt-0.5">{exc.best_candidate_txn_id}</p>
                   </div>
@@ -300,52 +303,7 @@ const ExceptionsQueue = ({ onTrace }: { onTrace: (id: number) => void }) => {
 const MatchesView = ({ onTrace }: { onTrace: (id: number) => void }) => {
   const [matches, setMatches] = useState<Match[]>([]);
   useEffect(() => {
-    fetchMatches().then(real => {
-      // Demo matches to showcase fuzzy and reasoned methods alongside real exact matches
-      const demoMatches: Match[] = [
-        {
-          match_id: 9001, method: 'fuzzy', confidence: 0.94,
-          reasoning: 'Fuzzy match: reference HDFC000000001043 found on bank side with amount ₹47,002 vs ledger ₹47,005 (₹3 rounding difference). Same payer name, date within 1 day. Committed as fuzzy match.',
-          invoice_id: 'INV-2026-0043', customer_name: 'Gupta Steel Works',
-          ledger_amount: 47005, ledger_ref: 'HDFC000000001043',
-          bank_txn_id: 'TXN-00043', bank_amount: 47002,
-          ledger_id: 9001,
-        } as any,
-        {
-          match_id: 9002, method: 'fuzzy', confidence: 0.91,
-          reasoning: 'Fuzzy match: reference UPI/384729103/001048 matched with amount ₹1,23,450 vs ledger ₹1,23,452 (₹2 rounding). Date drifted by 2 days (invoice 2026-08-12, bank 2026-08-14). Within settlement window.',
-          invoice_id: 'INV-2026-0048', customer_name: 'Patel Fabrics & Textiles',
-          ledger_amount: 123452, ledger_ref: 'UPI/384729103/001048',
-          bank_txn_id: 'TXN-00048', bank_amount: 123450,
-          ledger_id: 9002,
-        } as any,
-        {
-          match_id: 9003, method: 'fuzzy', confidence: 0.92,
-          reasoning: 'Fuzzy match: exact reference SBIN000000001051 found. Amount ₹8,999 vs ledger ₹9,004 (₹5 rounding difference). Same date. Single unique reference, difference within tolerance.',
-          invoice_id: 'INV-2026-0051', customer_name: 'Sharma Electronics Pvt Ltd',
-          ledger_amount: 9004, ledger_ref: 'SBIN000000001051',
-          bank_txn_id: 'TXN-00051', bank_amount: 8999,
-          ledger_id: 9003,
-        } as any,
-        {
-          match_id: 9004, method: 'reasoned', confidence: 0.89,
-          reasoning: 'Reasoned match: no exact ref match. Fuzzy search returned 2 candidates within ±1% amount. compare_names scored "Rajesh Kumar Enterprises" vs "R. K. Enterprises" at 0.78, and vs "Rajesh Kumar" at 0.42. Selected first candidate. check_duplicate_ref returned clean.',
-          invoice_id: 'INV-2026-0060', customer_name: 'Rajesh Kumar Enterprises',
-          ledger_amount: 85200, ledger_ref: 'BARB000000001060',
-          bank_txn_id: 'TXN-00060', bank_amount: 85200,
-          ledger_id: 9004,
-        } as any,
-        {
-          match_id: 9005, method: 'reasoned', confidence: 0.87,
-          reasoning: 'Reasoned match: exact search returned no results. Fuzzy search found one candidate with matching amount ₹2,34,560. Name comparison: "Krishnamurthy Jewellers" vs "K. Murthy Jewellers" scored 0.68 — low but plausible abbreviation. Date within 3-day window. No duplicate refs. Committed with moderate confidence.',
-          invoice_id: 'INV-2026-0061', customer_name: 'Krishnamurthy Jewellers',
-          ledger_amount: 234560, ledger_ref: 'ICIC000000001061',
-          bank_txn_id: 'TXN-00061', bank_amount: 234560,
-          ledger_id: 9005,
-        } as any,
-      ];
-      setMatches([...demoMatches, ...real]);
-    });
+    fetchMatches().then(setMatches);
   }, []);
 
   return (
@@ -369,7 +327,7 @@ const MatchesView = ({ onTrace }: { onTrace: (id: number) => void }) => {
                 <td className="px-4 py-1.5 font-mono text-xs font-medium text-text">{m.invoice_id}</td>
                 <td className="px-4 py-1.5 font-mono text-xs">{m.bank_txn_id}</td>
                 <td className="px-4 py-1.5 font-mono text-xs text-right">
-                  {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(m.ledger_amount)}
+                  {inr.format(m.ledger_amount)}
                 </td>
                 <td className="px-4 py-1.5">
                   <span className={cn(
@@ -389,7 +347,7 @@ const MatchesView = ({ onTrace }: { onTrace: (id: number) => void }) => {
                   </div>
                 </td>
                 <td className="px-4 py-1.5 text-right">
-                  <button onClick={() => onTrace((m as any).ledger_id || parseInt(m.invoice_id.split('-')[2]))} 
+                  <button onClick={() => onTrace(m.ledger_id)} 
                     className="text-text-muted hover:text-accent-matched text-xs font-medium transition-colors underline decoration-border underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-matched focus-visible:ring-offset-2 focus-visible:ring-offset-surface rounded-sm"
                   >
                     View trace
@@ -413,23 +371,6 @@ const TraceModal = ({ ledgerId, onClose }: { ledgerId: number; onClose: () => vo
   const [expandedSteps, setExpandedSteps] = useState<Set<number>>(new Set());
 
   useEffect(() => {
-    // Demo traces for fake matches
-    if (ledgerId >= 9000) {
-      const demoLogs: AuditLog[] = ledgerId <= 9003 ? [
-        { turn: 1, tool_name: 'find_exact_candidates', tool_input: { reference: 'HDFC000000001043', amount: 47005 }, tool_result: { candidates: [{ txn_id: 'TXN-00043', amount: 47002, utr_ref: 'HDFC000000001043', payer_name: 'Gupta Steel Works' }] }, created_at: new Date().toISOString() },
-        { turn: 2, tool_name: 'check_duplicate_ref', tool_input: { reference: 'HDFC000000001043' }, tool_result: { is_duplicate: false, count: 1 }, created_at: new Date().toISOString() },
-        { turn: 3, tool_name: 'commit_match', tool_input: { bank_txn_id: 'TXN-00043', confidence: 0.94, method: 'fuzzy', reasoning: 'Reference matches, amount differs by ₹3 (rounding). Single unique ref, no duplicates.' }, tool_result: { status: 'committed' }, created_at: new Date().toISOString() },
-      ] : [
-        { turn: 1, tool_name: 'find_exact_candidates', tool_input: { reference: 'BARB000000001060', amount: 85200 }, tool_result: { candidates: [] }, created_at: new Date().toISOString() },
-        { turn: 2, tool_name: 'find_fuzzy_candidates', tool_input: { amount: 85200, date: '2026-08-15', customer_name: 'Rajesh Kumar Enterprises' }, tool_result: { candidates: [{ txn_id: 'TXN-00060', amount: 85200, payer_name: 'R. K. Enterprises' }, { txn_id: 'TXN-00072', amount: 85100, payer_name: 'Rajesh Kumar' }] }, created_at: new Date().toISOString() },
-        { turn: 3, tool_name: 'compare_names', tool_input: { name_a: 'Rajesh Kumar Enterprises', name_b: 'R. K. Enterprises' }, tool_result: { similarity: 0.78, name_a: 'Rajesh Kumar Enterprises', name_b: 'R. K. Enterprises' }, created_at: new Date().toISOString() },
-        { turn: 4, tool_name: 'check_duplicate_ref', tool_input: { reference: 'BARB000000001060' }, tool_result: { is_duplicate: false, count: 1 }, created_at: new Date().toISOString() },
-        { turn: 5, tool_name: 'commit_match', tool_input: { bank_txn_id: 'TXN-00060', confidence: 0.89, method: 'reasoned', reasoning: 'Name similarity 0.78 for "R. K. Enterprises" — plausible abbreviation. Amount exact. No duplicate refs.' }, tool_result: { status: 'committed' }, created_at: new Date().toISOString() },
-      ];
-      setLogs(demoLogs);
-      setLoaded(true);
-      return;
-    }
     fetchAuditLog(ledgerId).then(data => { setLogs(data); setLoaded(true); });
   }, [ledgerId]);
 
@@ -444,13 +385,14 @@ const TraceModal = ({ ledgerId, onClose }: { ledgerId: number; onClose: () => vo
 
   const getSummary = (name: string, input: any) => {
     try {
-      if (name === 'find_exact_candidates') return `Searched exact amount ${input.ledger_amount} and ref ${input.ledger_ref}`;
-      if (name === 'find_fuzzy_candidates') return `Searched variations near ${input.amount}`;
-      if (name === 'compare_names') return `Compared "${input.name1}" with "${input.name2}"`;
-      if (name === 'check_duplicate_ref') return `Checked for duplicates of ${input.reference_number}`;
+      if (name === 'find_exact_candidates') return `Searched for reference ${input.reference} with amount ${input.amount}`;
+      if (name === 'find_fuzzy_candidates') return `Searched amounts near ${input.amount} around ${input.date}`;
+      if (name === 'compare_names') return `Compared "${input.name_a}" with "${input.name_b}"`;
+      if (name === 'check_duplicate_ref') return `Checked for duplicates of ${input.reference}`;
       if (name === 'commit_match') return `Committed match to txn ${input.bank_txn_id}`;
       if (name === 'flag_exception') return `Flagged as exception: ${input.reason}`;
-      if (name === 'precheck_exact') return `Database index found perfect match`;
+      if (name === 'precheck_exact') return `Exact reference and amount match, no LLM call needed`;
+      if (name === 'hard_stop') return `Tool-call budget exhausted without a decision`;
     } catch (e) {}
     return 'Action executed';
   };

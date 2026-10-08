@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://localhost:3000/api', // Hardcoded for demo, normally env var
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000/api',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -22,6 +22,9 @@ export interface Metrics {
   total_records: string;
   total_matches: string;
   total_exceptions: string;
+  open_exceptions: string;
+  rejected_exceptions: string;
+  pending_records?: number;
   precision?: number;
   recall?: number;
   accuracy?: number;
@@ -30,7 +33,8 @@ export interface Metrics {
 
 export interface Match {
   match_id: number;
-  method: string;
+  ledger_id: number;
+  method: 'exact' | 'fuzzy' | 'reasoned' | 'manual';
   confidence: number;
   reasoning: string;
   invoice_id: string;
