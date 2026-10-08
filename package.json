@@ -11,13 +11,14 @@
     "generate-data": "tsx scripts/generate_data.ts",
     "test-tools": "tsx scripts/test_tools.ts",
     "test-agent": "tsx scripts/test_agent.ts",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "vitest run",
     "db:backup": "tsx scripts/backup_and_clear.ts",
-    "db:restore": "tsx scripts/restore.ts"
+    "db:restore": "tsx scripts/restore.ts",
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "type": "commonjs",
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
@@ -35,6 +36,7 @@
     "@types/string-similarity": "^4.0.2",
     "ts-node": "^10.9.2",
     "tsx": "^4.23.13",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.3"
   }
 }

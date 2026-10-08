@@ -6,7 +6,7 @@ import { query, getClient } from '../db';
  * Parse a simple CSV string into rows of key-value objects.
  * Handles quoted fields (commas inside quotes, escaped double-quotes).
  */
-function parseCsv(raw: string): Record<string, string>[] {
+export function parseCsv(raw: string): Record<string, string>[] {
   const lines = raw.trim().split('\n').map(l => l.replace(/\r$/, ''));
   if (lines.length < 2) return [];
 
