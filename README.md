@@ -3,7 +3,7 @@
   <p><strong>AI-powered financial reconciliation system</strong></p>
   
   [![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
-  [![React](https://img.shields.io/badge/React-18-blue.svg)](https://reactjs.org/)
+  [![React](https://img.shields.io/badge/React-19-blue.svg)](https://reactjs.org/)
   [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14+-blue.svg)](https://www.postgresql.org/)
   [![Gemini](https://img.shields.io/badge/AI-Gemini%202.0%20Flash-orange.svg)](https://aistudio.google.com/)
   [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -56,7 +56,8 @@ graph TD
         Agent -->|Tool Call| T2[find_fuzzy_candidates]
         Agent -->|Tool Call| T3[compare_names]
         Agent -->|Tool Call| T4[check_duplicate_ref]
-        Agent -->|Terminal| Resolve[match_record / flag_exception]
+        Agent -->|Terminal| Guard{Server guardrails}
+        Guard --> Commit[commit_match / flag_exception]
     end
 
     subgraph Frontend (React/Vite/Tailwind v4)
@@ -82,45 +83,63 @@ graph TD
     MV --> Matches
 ```
 
+## 🛡️ Guardrails
+
+The model proposes; the server decides. Every `commit_match` is re-checked against the database before anything is written, and becomes an exception (logged as a `guardrail_override` step in the trace) if:
+
+- the bank transaction doesn't exist,
+- it is already matched to another invoice,
+- its reference appears on more than one bank transaction,
+- confidence is below **0.85**, or
+- the amount differs by more than **1%**.
+
+The schema backs this up: each ledger record has at most one match and one exception, and each bank transaction can be matched only once. Each record's outcome and its audit rows are written in one transaction. The agent gets at most **6 investigative tool calls** per record, and ingest/reconcile runs can't overlap. Matches approved by a human reviewer are stored with method `manual` and excluded from the agent's metrics.
+
 ## 🚀 How to Run Locally
 
-### Prerequisites
-- Node.js (v18+)
-- PostgreSQL instance running locally.
-- A Google Gemini API key.
-
-### 1. Environment Setup
-Create a `.env` file in the root directory:
-```
-DB_USER=postgres
-DB_PASSWORD=yourpassword
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=reconagent
-GEMINI_API_KEY=your_gemini_api_key
-GEMINI_MODEL=gemini-2.0-flash
-```
-
-### 2. Backend Setup
-Install dependencies and run the database migrations:
+### Option A: Docker
 ```bash
-npm install
-npm run migrate
+cp .env.example .env   # then set GEMINI_API_KEY
+docker compose up --build
+```
+Dashboard: `http://localhost:5173` · API: `http://localhost:3000` · Postgres is exposed on host port `5433`.
+
+### Option B: Manual
+
+**Prerequisites:** Node.js 20+, a running PostgreSQL 14+ instance, and a [Gemini API key](https://aistudio.google.com/apikey).
+
+1. **Environment.** Copy `.env.example` to `.env` and fill it in:
+   ```
+   DATABASE_URL=postgresql://postgres:postgres@localhost:5432/reconagent
+   GEMINI_API_KEY=your_gemini_api_key
+   GEMINI_MODEL=gemini-2.0-flash
+   ```
+2. **Backend** (runs on `http://localhost:3000`, migrations run on startup):
+   ```bash
+   npm install
+   npm run dev
+   ```
+3. **Frontend** (runs on `http://localhost:5173`; set `VITE_API_URL` in `client/.env` if the API isn't on port 3000):
+   ```bash
+   cd client
+   npm install
+   npm run dev
+   ```
+
+## ✅ Tests
+
+```bash
+npm test
+```
+Unit tests cover the guardrails, metrics, name comparison and CSV parsing. Integration tests run the real agent loop against Postgres with a scripted fake Gemini (precheck, guardrail overrides, double-claim prevention, tool-call budget). They run only when `TEST_DATABASE_URL` points at a **disposable** database, because they truncate every table:
+
+```bash
+TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/reconagent_test npm test
 ```
 
-Start the backend server (runs on `http://localhost:3000`):
-```bash
-npm run dev
-```
+## 💾 Backup & Restore
 
-### 3. Frontend Setup
-In a separate terminal, navigate to the `client/` directory:
-```bash
-cd client
-npm install
-npm run dev
-```
-The React dashboard will be available at `http://localhost:5173`.
+`npm run db:backup` writes all tables to `database_backup.json` and then **clears the database**. `npm run db:restore` loads that file back.
 
 ## 🧪 How to Run the Generator
 To populate the database with synthetic testing data, you must generate the CSV files. 
@@ -134,14 +153,17 @@ This script uses a fixed random seed to generate ~70 ledger records and ~75 bank
 You can then ingest this data via the frontend dashboard by clicking **"Reset & Ingest Data"**, which uploads it to PostgreSQL.
 
 ## 📊 How Metrics are Computed
-The metrics system (`/api/metrics`) dynamically evaluates the AI agent's performance by comparing its final decisions against the deterministic `ground_truth.json` answer key generated during the data creation step.
+`/api/metrics` scores the **agent's own decisions** against the `ground_truth.json` answer key produced by the generator. Manual (human) matches are excluded, and records the agent hasn't processed yet are reported as `pending_records` instead of being counted as errors.
 
-- **True Positives (TP)**: The agent correctly matched a ledger record to the expected bank transaction.
-- **False Positives (FP)**: The agent matched a record to the *wrong* bank transaction, OR matched a record that was supposed to be an exception.
-- **False Negatives (FN)**: The agent flagged a record as an exception when it *should* have been matched, OR missed the correct match.
-- **True Negatives (TN)**: The agent correctly flagged a record as an exception (e.g., missing bank transaction).
+Precision and recall are **pair-level**:
+- **True Positive (TP)**: matched to the expected bank transaction.
+- **False Positive (FP)**: matched to the wrong transaction, or matched a record that should have been an exception.
+- **False Negative (FN)**: the expected pair wasn't found, either because the record was flagged or matched elsewhere. A wrong match therefore counts as both FP and FN.
+- **True Negative (TN)**: correctly flagged as an exception.
 
-The formulas used:
-- **Precision**: `TP / (TP + FP)` (How many of the agent's matches were actually correct?)
-- **Recall**: `TP / (TP + FN)` (How many of the actual true matches did the agent successfully find?)
-- **Accuracy**: `(TP + TN) / (TP + TN + FP + FN)`
+The formulas:
+- **Precision**: `TP / (TP + FP)`: how many of the agent's matches were correct?
+- **Recall**: `TP / (TP + FN)`: how many of the true matches did it find?
+- **Accuracy**: correctly decided records / decided records. This is **record-level**, so each record counts once.
+
+The response also includes `by_case_type`, with correct and pending counts for each edge case (rounding, date drift, name variants, split payments, duplicates, missing transactions).

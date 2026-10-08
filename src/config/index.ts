@@ -1,8 +1,9 @@
 import dotenv from 'dotenv';
 import path from 'path';
 
-// Load .env from project root
-dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+// Paths resolve from the working directory (the project root for npm scripts
+// and Docker) rather than __dirname, which points into dist/ after a build.
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 interface Config {
   database: {
@@ -12,6 +13,8 @@ interface Config {
     port: number;
     nodeEnv: string;
   };
+  /** Folder holding ledger_records.csv, bank_transactions.csv and ground_truth.json */
+  dataDir: string;
 }
 
 const config: Config = {
@@ -22,6 +25,7 @@ const config: Config = {
     port: parseInt(process.env.PORT || '3000', 10),
     nodeEnv: process.env.NODE_ENV || 'development',
   },
+  dataDir: path.resolve(process.cwd(), process.env.DATA_DIR || 'data'),
 };
 
 export default config;

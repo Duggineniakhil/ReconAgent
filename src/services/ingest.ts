@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import { query, getClient } from '../db';
+import { getClient } from '../db';
+import config from '../config';
 
 /**
  * Parse a simple CSV string into rows of key-value objects.
@@ -63,7 +64,7 @@ function parseCsvLine(line: string): string[] {
  * Clears existing data first (truncate cascade) for a clean reload.
  */
 export async function ingestData(dataDir?: string): Promise<{ ledgerCount: number; bankCount: number }> {
-  const dir = dataDir ?? path.resolve(__dirname, '../../data');
+  const dir = dataDir ?? config.dataDir;
 
   const ledgerCsv = fs.readFileSync(path.join(dir, 'ledger_records.csv'), 'utf-8');
   const bankCsv   = fs.readFileSync(path.join(dir, 'bank_transactions.csv'), 'utf-8');

@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
+import config from '../config';
 import { ingestData } from '../services/ingest';
 import { query, withTransaction } from '../db';
 import { reconcileRecord } from '../agent';
@@ -233,7 +234,7 @@ apiRouter.get('/metrics', async (req: Request, res: Response) => {
         (SELECT COUNT(*) FROM exceptions WHERE status = 'rejected') as rejected_exceptions
     `);
 
-    const gtPath = path.resolve(__dirname, '../../data/ground_truth.json');
+    const gtPath = path.join(config.dataDir, 'ground_truth.json');
     if (!fs.existsSync(gtPath)) {
       res.json(stats.rows[0]);
       return;
