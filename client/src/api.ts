@@ -117,8 +117,15 @@ export interface Match {
   customer_name: string;
   ledger_amount: number;
   ledger_ref: string;
-  bank_txn_id: string;
-  bank_amount: number;
+  /** Set for direct bank matches. */
+  bank_txn_id: string | null;
+  bank_amount: number | null;
+  /** Set when the invoice was matched to a Razorpay payment. */
+  gateway_entity_id: string | null;
+  gateway_amount: number | null;
+  gateway_fee: number | null;
+  gateway_method: string | null;
+  gateway_settlement_id: string | null;
 }
 
 export interface Exception {
@@ -134,6 +141,58 @@ export interface Exception {
   ledger_ref: string;
   best_candidate_txn_id: string | null;
   best_candidate_amount: number | null;
+  best_candidate_kind: 'bank' | 'gateway' | null;
+}
+
+export type SettlementStatus = 'matched' | 'mismatch' | 'missing';
+
+export interface Settlement {
+  settlement_id: string;
+  settlement_utr: string | null;
+  settled_at: string | null;
+  payment_count: number;
+  gross: number;
+  fees: number;
+  tax: number;
+  refunds: number;
+  other: number;
+  net: number;
+  /** Null until a run has reconciled this settlement. */
+  outcome: {
+    status: SettlementStatus;
+    reasoning: string;
+    difference: number | null;
+    bank_amount: number | null;
+    bank_txn_id: string | null;
+    bank_date: string | null;
+  } | null;
+}
+
+export interface SettlementLine {
+  entity_id: string;
+  entity_type: 'payment' | 'refund' | 'transfer' | 'adjustment';
+  amount: number;
+  fee: number;
+  tax: number;
+  net: number;
+  method: string | null;
+  order_receipt: string | null;
+  payment_id: string | null;
+  created_at: string;
+  matched_invoice: string | null;
+}
+
+export interface FeeRow {
+  payments: number;
+  gross: number;
+  fees: number;
+  tax: number;
+  effective_rate: number;
+}
+
+export interface FeeSummary {
+  total: FeeRow;
+  by_method: (FeeRow & { method: string })[];
 }
 
 export interface AuditLog {
@@ -224,9 +283,37 @@ export const fetchExceptions = async (): Promise<Exception[]> => {
 export const resolveException = async (
   id: number,
   action: 'match' | 'reject',
-  bank_txn_id?: string
+  target?: { kind: 'bank' | 'gateway'; id: string },
 ): Promise<{ success: boolean; message: string }> => {
-  const { data } = await api.post(`/exceptions/${id}/resolve`, { action, bank_txn_id });
+  const body = target?.kind === 'gateway'
+    ? { action, gateway_entity_id: target.id }
+    : { action, bank_txn_id: target?.id };
+  const { data } = await api.post(`/exceptions/${id}/resolve`, body);
+  return data;
+};
+
+export const fetchSettlements = async (): Promise<Settlement[]> => {
+  const { data } = await api.get('/settlements');
+  return data;
+};
+
+export const fetchSettlementLines = async (id: string): Promise<SettlementLine[]> => {
+  const { data } = await api.get(`/settlements/${encodeURIComponent(id)}`);
+  return data;
+};
+
+export const fetchGatewayFees = async (): Promise<FeeSummary> => {
+  const { data } = await api.get('/gateway/fees');
+  return data;
+};
+
+export const fetchRazorpayStatus = async (): Promise<{ configured: boolean; mode: 'test' | 'live' | null }> => {
+  const { data } = await api.get('/razorpay/status');
+  return data;
+};
+
+export const syncRazorpay = async (from: string, to: string): Promise<{ days: number; items: number; settlements: number }> => {
+  const { data } = await api.post('/razorpay/sync', { from, to });
   return data;
 };
 

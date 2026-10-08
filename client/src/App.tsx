@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, AlertCircle, CheckCircle2, Play, Database, FileSearch, X, History, Upload } from 'lucide-react';
+import { LayoutDashboard, AlertCircle, CheckCircle2, Play, Database, FileSearch, X, History, Upload, Landmark } from 'lucide-react';
 import { fetchMetrics, triggerIngest, fetchMatches, fetchExceptions, fetchAuditLog, resolveException, fetchDataset, fetchRuns, startRun, apiError } from './api';
 import type { Metrics, Match, Exception, AuditLog, Dataset, Run } from './api';
 import { cn, inr, formatPercent, btnPrimary, btnSecondary } from './lib/format';
 import { RunProgress, RunsView } from './components/Runs';
+import { SettlementsView } from './components/Settlements';
 import { UploadModal } from './components/UploadModal';
 
 const Dashboard = () => {
@@ -233,9 +234,9 @@ const ExceptionsQueue = ({ onTrace }: { onTrace: (id: number) => void }) => {
 
   useEffect(() => { load(); }, []);
 
-  const handleResolve = async (id: number, action: 'match' | 'reject', bankTxnId: string | null) => {
+  const handleResolve = async (id: number, action: 'match' | 'reject', target?: { kind: 'bank' | 'gateway'; id: string }) => {
     setLoading(true);
-    await resolveException(id, action, bankTxnId || undefined);
+    await resolveException(id, action, target);
     await load();
     setLoading(false);
   };
@@ -294,14 +295,14 @@ const ExceptionsQueue = ({ onTrace }: { onTrace: (id: number) => void }) => {
                   <>
                     <button
                       disabled={loading || !exc.best_candidate_txn_id}
-                      onClick={() => handleResolve(exc.exception_id, 'match', exc.best_candidate_txn_id)} 
+                      onClick={() => handleResolve(exc.exception_id, 'match', { kind: exc.best_candidate_kind ?? 'bank', id: exc.best_candidate_txn_id! })}
                       className="px-3 py-1.5 text-xs font-medium border border-accent-matched text-accent-matched hover:bg-accent-matched hover:text-surface rounded transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-matched focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
                     >
                       Approve
                     </button>
                     <button
                       disabled={loading}
-                      onClick={() => handleResolve(exc.exception_id, 'reject', null)} 
+                      onClick={() => handleResolve(exc.exception_id, 'reject')} 
                       className="px-3 py-1.5 text-xs font-medium border border-accent-error text-accent-error hover:bg-accent-error hover:text-white rounded transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-error focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
                     >
                       Reject
@@ -331,7 +332,7 @@ const ExceptionsQueue = ({ onTrace }: { onTrace: (id: number) => void }) => {
                     <p className="font-mono text-text-muted text-xs truncate mt-0.5">{exc.ledger_ref}</p>
                   </div>
                   <div>
-                    <p className="text-text-muted text-xs mb-1">Found Bank Txn</p>
+                    <p className="text-text-muted text-xs mb-1">{exc.best_candidate_kind === 'gateway' ? 'Razorpay payment' : 'Found Bank Txn'}</p>
                     <p className="font-mono text-text">
                       {inr.format(exc.best_candidate_amount || 0)}
                     </p>
@@ -361,7 +362,7 @@ const MatchesView = ({ onTrace }: { onTrace: (id: number) => void }) => {
           <thead className="bg-surface-raised text-text-muted font-medium text-xs">
             <tr>
               <th className="px-4 py-2 font-normal">Ledger ID</th>
-              <th className="px-4 py-2 font-normal">Bank Txn ID</th>
+              <th className="px-4 py-2 font-normal">Matched to</th>
               <th className="px-4 py-2 font-normal text-right">Amount</th>
               <th className="px-4 py-2 font-normal">Method</th>
               <th className="px-4 py-2 font-normal">Confidence</th>
@@ -372,7 +373,14 @@ const MatchesView = ({ onTrace }: { onTrace: (id: number) => void }) => {
             {matches.map((m, i) => (
               <tr key={m.match_id} className={cn("hover:bg-surface transition-colors", i % 2 === 0 ? "bg-surface/80" : "bg-base/60")}>
                 <td className="px-4 py-1.5 font-mono text-xs font-medium text-text">{m.invoice_id}</td>
-                <td className="px-4 py-1.5 font-mono text-xs">{m.bank_txn_id}</td>
+                <td className="px-4 py-1.5 font-mono text-xs">
+                  {m.gateway_entity_id ? (
+                    <span title={`Razorpay ${m.gateway_method ?? ''} payment, fee ${inr.format(m.gateway_fee ?? 0)}, settlement ${m.gateway_settlement_id ?? 'pending'}`}>
+                      {m.gateway_entity_id}
+                      <span className="ml-1.5 px-1 py-px rounded bg-surface-raised text-text-muted font-sans text-[10px]">Razorpay</span>
+                    </span>
+                  ) : m.bank_txn_id}
+                </td>
                 <td className="px-4 py-1.5 font-mono text-xs text-right">
                   {inr.format(m.ledger_amount)}
                 </td>
@@ -436,7 +444,10 @@ const TraceModal = ({ ledgerId, onClose }: { ledgerId: number; onClose: () => vo
       if (name === 'find_fuzzy_candidates') return `Searched amounts near ${input.amount} around ${input.date}`;
       if (name === 'compare_names') return `Compared "${input.name_a}" with "${input.name_b}"`;
       if (name === 'check_duplicate_ref') return `Checked for duplicates of ${input.reference}`;
-      if (name === 'commit_match') return `Committed match to txn ${input.bank_txn_id}`;
+      if (name === 'find_gateway_payments') return `Searched Razorpay payments near ${input.amount}${input.receipt ? ` with receipt ${input.receipt}` : ''}`;
+      if (name === 'explain_bank_credit') return `Checked whether ${input.bank_txn_id} is a Razorpay settlement payout`;
+      if (name === 'precheck_gateway') return `Razorpay payment with this invoice as order receipt, no LLM call needed`;
+      if (name === 'commit_match') return `Committed match to ${input.gateway_entity_id ? `Razorpay payment ${input.gateway_entity_id}` : `txn ${input.bank_txn_id}`}`;
       if (name === 'flag_exception') return `Flagged as exception: ${input.reason}`;
       if (name === 'precheck_exact') return `Exact reference and amount match, no LLM call needed`;
       if (name === 'hard_stop') return `Tool-call budget exhausted without a decision`;
@@ -467,7 +478,7 @@ const TraceModal = ({ ledgerId, onClose }: { ledgerId: number; onClose: () => vo
           ) : (
             <div className="space-y-0">
               {logs.map((log, i) => {
-                const isTerminal = ['commit_match', 'flag_exception', 'precheck_exact', 'guardrail_override', 'hard_stop', 'no_terminal_call'].includes(log.tool_name);
+                const isTerminal = ['commit_match', 'flag_exception', 'precheck_exact', 'precheck_gateway', 'guardrail_override', 'hard_stop', 'no_terminal_call'].includes(log.tool_name);
                 const isExpanded = expandedSteps.has(i);
                 
                 return (
@@ -531,12 +542,13 @@ const TraceModal = ({ ledgerId, onClose }: { ledgerId: number; onClose: () => vo
 };
 
 function App() {
- const [currentTab, setCurrentTab] = useState<'dashboard' | 'runs' | 'exceptions' | 'matches'>('dashboard');
+ const [currentTab, setCurrentTab] = useState<'dashboard' | 'runs' | 'settlements' | 'exceptions' | 'matches'>('dashboard');
  const [traceId, setTraceId] = useState<number | null>(null);
 
  const tabs = [
  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
  { id: 'runs', label: 'Runs', icon: History },
+ { id: 'settlements', label: 'Settlements', icon: Landmark },
  { id: 'exceptions', label: 'Exceptions', icon: AlertCircle },
  { id: 'matches', label: 'Matches', icon: CheckCircle2 },
  ] as const;
@@ -581,6 +593,7 @@ function App() {
   <div key={currentTab} className="animate-in fade-in slide-in-from-bottom-4 duration-500">
   {currentTab === 'dashboard' && <Dashboard />}
   {currentTab === 'runs' && <RunsView />}
+  {currentTab === 'settlements' && <SettlementsView />}
   {currentTab === 'exceptions' && <ExceptionsQueue onTrace={setTraceId} />}
   {currentTab === 'matches' && <MatchesView onTrace={setTraceId} />}
   </div>
